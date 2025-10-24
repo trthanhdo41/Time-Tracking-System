@@ -31,6 +31,12 @@ export const StaffNavigation: React.FC = () => {
       label: 'Camera',
       path: '/camera',
       active: location.pathname === '/camera'
+    },
+    {
+      icon: <CameraIcon className="w-5 h-5" />,
+      label: 'Thư Viện Ảnh',
+      path: '/images',
+      active: location.pathname === '/images'
     }
   ];
 

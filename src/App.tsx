@@ -11,6 +11,7 @@ import { AdminDashboard } from '@/pages/AdminDashboard';
 import { DepartmentAdminDashboard } from '@/pages/DepartmentAdminDashboard';
 import { HistoryPage } from '@/pages/HistoryPage';
 import { CameraPage } from '@/pages/CameraPage';
+import { ImageGalleryPage } from '@/pages/ImageGalleryPage';
 import { SystemSettingsPage } from '@/pages/SystemSettingsPage';
 import { Navbar } from '@/components/layout/Navbar';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
@@ -132,6 +133,10 @@ function App() {
           <Route
             path="/camera"
             element={user ? <CameraPage /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/images"
+            element={user ? <ImageGalleryPage /> : <Navigate to="/login" />}
           />
           <Route
             path="/system-settings"
