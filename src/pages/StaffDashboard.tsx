@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { useSessionStore } from '@/store/sessionStore';
 import { Card, CardHeader } from '@/components/ui/Card';
@@ -34,6 +34,7 @@ export const StaffDashboard: React.FC = () => {
   const { user } = useAuthStore();
   const { currentSession, status } = useSessionStore();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [showCaptcha, setShowCaptcha] = useState(false);
   const [onlineTime, setOnlineTime] = useState(0);
   const [showBackSoonModal, setShowBackSoonModal] = useState(false);
@@ -43,6 +44,16 @@ export const StaffDashboard: React.FC = () => {
   const [showCheckInCamera, setShowCheckInCamera] = useState(false);
   const [todayActivities, setTodayActivities] = useState<any[]>([]);
   const [settings, setSettings] = useState<SystemSettings | null>(null);
+
+  // Handle URL parameters for tab
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'images') {
+      setActiveTab('images');
+    } else {
+      setActiveTab('dashboard');
+    }
+  }, [searchParams]);
 
   // Listen to system settings
   useEffect(() => {
@@ -239,61 +250,70 @@ export const StaffDashboard: React.FC = () => {
   return (
     <div className="min-h-screen pb-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Hero Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-12"
-        >
-          <div className="text-center">
-            <h1 className="text-4xl md:text-5xl font-bold">
-              Xin chào, <span className="gradient-text">{user?.username}</span>
-            </h1>
-            <p className="text-gray-400 text-lg mt-1">
-              {user?.position} - {user?.department}
-            </p>
-          </div>
-          <p className="text-sm text-gray-500 mt-2">
-            {currentTime} (GMT+7)
-          </p>
-        </motion.div>
+        {/* Hero Section - Only show when not in images tab */}
+        {activeTab !== 'images' && (
+          <>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-center mb-12"
+            >
+              <div className="text-center">
+                <h1 className="text-4xl md:text-5xl font-bold">
+                  Xin chào, <span className="gradient-text">{user?.username}</span>
+                </h1>
+                <p className="text-gray-400 text-lg mt-1">
+                  {user?.position} - {user?.department}
+                </p>
+              </div>
+              <p className="text-sm text-gray-500 mt-2">
+                {currentTime} (GMT+7)
+              </p>
+            </motion.div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <Card gradient>
-            <CardHeader 
-              title="Thời Gian Online" 
-              icon={<ChartIcon className="w-6 h-6" />}
-            />
-            <div className="text-3xl font-bold text-primary-400 font-mono">
-              {formatDuration(onlineTime)}
-            </div>
-            <p className="text-sm text-gray-400 mt-2">Hôm nay</p>
-          </Card>
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <Card gradient>
+                <CardHeader 
+                  title="Thời Gian Online" 
+                  icon={<ChartIcon className="w-6 h-6" />}
+                />
+                <div className="text-3xl font-bold text-primary-400 font-mono">
+                  {formatDuration(onlineTime)}
+                </div>
+                <p className="text-sm text-gray-400 mt-2">Hôm nay</p>
+              </Card>
 
-          <Card gradient>
-            <CardHeader 
-              title="Back Soon Time" 
-              icon={<BackSoonIcon className="w-6 h-6" />}
-            />
-            <div className="text-3xl font-bold text-yellow-400 font-mono">
-              {formatDuration(currentSession?.totalBackSoonTime || 0)}
+              <Card gradient>
+                <CardHeader 
+                  title="Back Soon Time" 
+                  icon={<BackSoonIcon className="w-6 h-6" />}
+                />
+                <div className="text-3xl font-bold text-yellow-400 font-mono">
+                  {formatDuration(currentSession?.totalBackSoonTime || 0)}
+                </div>
+                <p className="text-sm text-gray-400 mt-2">Tổng hôm nay</p>
+              </Card>
             </div>
-            <p className="text-sm text-gray-400 mt-2">Tổng hôm nay</p>
-          </Card>
-        </div>
+          </>
+        )}
 
 
         {/* Action Buttons */}
-        <Card className="mb-8">
-          <CardHeader title="Hành Động" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6"
+        >
+          <Card>
+            <div className="flex gap-2 flex-wrap">
             {status === 'offline' ? (
               <Button
                 variant="primary"
                 size="lg"
                 icon={<CameraIcon />}
                 onClick={() => setShowCheckInCamera(true)}
+                className="flex-1 min-w-[150px]"
               >
                 Check In
               </Button>
@@ -304,6 +324,7 @@ export const StaffDashboard: React.FC = () => {
                   size="lg"
                   icon={<CheckOutIcon />}
                   onClick={handleCheckOut}
+                  className="flex-1 min-w-[150px]"
                 >
                   Check Out
                 </Button>
@@ -318,6 +339,7 @@ export const StaffDashboard: React.FC = () => {
                       setShowBackSoonModal(true);
                     }
                   }}
+                  className="flex-1 min-w-[150px]"
                 >
                   {status === 'back_soon' ? 'Trở Lại Làm Việc' : 'Back Soon'}
                 </Button>
@@ -329,6 +351,7 @@ export const StaffDashboard: React.FC = () => {
               size="lg"
               icon={<HistoryIcon />}
               onClick={() => navigate('/history')}
+              className="flex-1 min-w-[150px]"
             >
               Lịch Sử
             </Button>
@@ -338,6 +361,7 @@ export const StaffDashboard: React.FC = () => {
               size="lg"
               icon={<CameraIcon />}
               onClick={() => navigate('/camera')}
+              className="flex-1 min-w-[150px]"
             >
               Camera
             </Button>
@@ -346,12 +370,15 @@ export const StaffDashboard: React.FC = () => {
               variant="secondary"
               size="lg"
               icon={<CameraIcon />}
-              onClick={() => setActiveTab('images')}
+              onClick={() => navigate('/images')}
+              className="flex-1 min-w-[150px]"
             >
               Thư Viện Ảnh
             </Button>
-          </div>
-        </Card>
+            
+            </div>
+          </Card>
+        </motion.div>
 
         {/* Content based on active tab */}
         {activeTab === 'images' ? (
