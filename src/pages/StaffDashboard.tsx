@@ -9,7 +9,6 @@ import { CheckInCamera } from '@/components/staff/CheckInCamera';
 import { CaptchaModal } from '@/components/staff/CaptchaModal';
 import { BackSoonModal } from '@/components/staff/BackSoonModal';
 import { FaceVerificationModal } from '@/components/staff/FaceVerificationModal';
-import { NotificationManager } from '@/components/notifications/NotificationManager';
 import { ImageGallery } from '@/components/staff/ImageGallery';
 import { 
   CheckOutIcon, 
@@ -246,25 +245,13 @@ export const StaffDashboard: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-12"
         >
-          <div className="flex items-center justify-center gap-6 mb-4">
-            {user?.faceImageUrl && (
-              <div className="relative">
-                <img
-                  src={user.faceImageUrl}
-                  alt="Face0"
-                  className="w-20 h-20 rounded-full object-cover border-2 border-primary-500/50 shadow-lg"
-                />
-                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-2 border-dark-100"></div>
-              </div>
-            )}
-            <div>
-              <h1 className="text-4xl md:text-5xl font-bold">
-                Xin chào, <span className="gradient-text">{user?.username}</span>
-              </h1>
-              <p className="text-gray-400 text-lg mt-1">
-                {user?.position} - {user?.department}
-              </p>
-            </div>
+          <div className="text-center">
+            <h1 className="text-4xl md:text-5xl font-bold">
+              Xin chào, <span className="gradient-text">{user?.username}</span>
+            </h1>
+            <p className="text-gray-400 text-lg mt-1">
+              {user?.position} - {user?.department}
+            </p>
           </div>
           <p className="text-sm text-gray-500 mt-2">
             {currentTime} (GMT+7)
@@ -272,7 +259,7 @@ export const StaffDashboard: React.FC = () => {
         </motion.div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <Card gradient>
             <CardHeader 
               title="Thời Gian Online" 
@@ -282,27 +269,6 @@ export const StaffDashboard: React.FC = () => {
               {formatDuration(onlineTime)}
             </div>
             <p className="text-sm text-gray-400 mt-2">Hôm nay</p>
-          </Card>
-
-          <Card gradient>
-            <CardHeader 
-              title="Trạng Thái" 
-              icon={<ChartIcon className="w-6 h-6" />}
-            />
-            <div className="flex items-center gap-2">
-              <motion.div
-                animate={{
-                  scale: status === 'online' ? [1, 1.2, 1] : 1,
-                }}
-                transition={{ duration: 2, repeat: Infinity }}
-                className={`w-4 h-4 rounded-full ${
-                  status === 'online' ? 'bg-green-500' :
-                  status === 'back_soon' ? 'bg-yellow-500' :
-                  'bg-gray-500'
-                }`}
-              />
-              <span className="text-2xl font-bold capitalize">{status}</span>
-            </div>
           </Card>
 
           <Card gradient>
@@ -486,12 +452,6 @@ export const StaffDashboard: React.FC = () => {
         user={user!}
       />
 
-      {/* Notification Manager */}
-      <NotificationManager
-        user={user!}
-        onCaptchaTrigger={handleCaptchaTrigger}
-        onFaceVerifyTrigger={handleFaceVerifyTrigger}
-      />
 
       {/* Check In Camera - Fullscreen Inline */}
       {showCheckInCamera && (

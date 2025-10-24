@@ -24,6 +24,7 @@ export interface User {
   role: UserRole;
   department: string;
   position: string;
+  status?: UserStatus; // Add status field
   faceImageUrl?: string; // Face0 - base face image
   face1Url?: string;     // First check-in face image
   face2Url?: string;     // Periodic verification face image
@@ -118,12 +119,16 @@ export interface ImageDeleteRequest {
 export interface ActivityLog {
   id: string;
   userId: string;
-  userName: string;
+  username: string; // Add username field
+  userName?: string; // Keep userName for backward compatibility
+  department: string; // Add department field
+  userDepartment?: string; // Keep userDepartment for backward compatibility
+  position: string; // Add position field
+  userPosition?: string; // Keep userPosition for backward compatibility
   userRole: UserRole;
-  userDepartment: string;
-  userPosition: string;
   actionType: ActionType;
-  actionDetails: string;
+  description: string; // Add description field
+  actionDetails?: string; // Keep actionDetails for backward compatibility
   performedBy?: string; // For admin actions
   performedByRole?: UserRole;
   performedByDepartment?: string;
