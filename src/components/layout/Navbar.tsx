@@ -3,13 +3,10 @@ import { motion } from 'framer-motion';
 import { useAuthStore } from '@/store/authStore';
 import { useSessionStore } from '@/store/sessionStore';
 import { Button } from '@/components/ui/Button';
-import { StatusBadge } from '@/components/ui/StatusBadge';
 import { 
   LogoutIcon, 
-  BellIcon, 
   MenuIcon, 
-  CloseIcon,
-  SettingsIcon 
+  CloseIcon
 } from '@/components/icons';
 import { signOut } from '@/services/auth';
 import toast from 'react-hot-toast';
@@ -63,7 +60,7 @@ export const Navbar: React.FC = () => {
             </div>
           </div>
 
-          {/* Center - Time & Status */}
+          {/* Center - Time */}
           <div className="hidden lg:flex items-center gap-6">
             <div className="text-center">
               <div className="text-2xl font-mono font-bold text-primary-400">
@@ -73,33 +70,10 @@ export const Navbar: React.FC = () => {
                 {time.toLocaleDateString('vi-VN')}
               </div>
             </div>
-            <StatusBadge status={status} />
           </div>
 
           {/* Right - User Actions */}
           <div className="flex items-center gap-3">
-            {/* Notifications */}
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="relative p-2 rounded-lg hover:bg-white/10 transition-colors"
-            >
-              <BellIcon className="w-6 h-6" />
-              <motion.span
-                animate={{ scale: [1, 1.2, 1] }}
-                transition={{ duration: 2, repeat: Infinity }}
-                className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"
-              />
-            </motion.button>
-
-            {/* Settings */}
-            <motion.button
-              whileHover={{ scale: 1.05, rotate: 90 }}
-              whileTap={{ scale: 0.95 }}
-              className="hidden md:block p-2 rounded-lg hover:bg-white/10 transition-colors"
-            >
-              <SettingsIcon className="w-6 h-6" />
-            </motion.button>
 
             {/* User Info */}
             <div className="hidden md:flex items-center gap-3 px-4 py-2 glass rounded-xl">
@@ -107,7 +81,19 @@ export const Navbar: React.FC = () => {
                 <p className="text-sm font-medium">{user.username}</p>
                 <p className="text-xs text-gray-400">{user.position}</p>
               </div>
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center">
+              {user.faceImageUrl ? (
+                <img
+                  src={user.faceImageUrl}
+                  alt="Avatar"
+                  className="w-10 h-10 rounded-lg object-cover border-2 border-primary-500/50"
+                  onError={(e) => {
+                    // Fallback to initial if image fails to load
+                    e.currentTarget.style.display = 'none';
+                    e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                  }}
+                />
+              ) : null}
+              <div className={`w-10 h-10 rounded-lg bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center ${user.faceImageUrl ? 'hidden' : ''}`}>
                 <span className="text-white font-bold">
                   {user.username.charAt(0).toUpperCase()}
                 </span>

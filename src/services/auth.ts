@@ -8,6 +8,7 @@ import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '@/config/firebase';
 import { User, UserRole } from '@/types';
 import { logActivity } from './activityLog';
+import { startUserStatusTracking, stopUserStatusTracking } from '@/utils/userStatusTracker';
 
 export const signIn = async (email: string, password: string): Promise<User> => {
   try {
@@ -20,11 +21,17 @@ export const signIn = async (email: string, password: string): Promise<User> => 
 
     const userData = userDoc.data() as User;
 
-    // Update user status to online
+    // Update user status to online immediately
     await updateDoc(doc(db, 'users', userCredential.user.uid), {
       status: 'online',
-      lastLoginAt: Date.now()
+      lastLoginAt: Date.now(),
+      lastActivityAt: Date.now()
     });
+
+    // Start user status tracking
+    startUserStatusTracking(userCredential.user.uid);
+    
+    console.log(`User ${userData.username} logged in and status tracking started`);
 
     await logActivity(
       userData.id,
@@ -67,11 +74,8 @@ export const signOut = async () => {
       if (userDoc.exists()) {
         const userData = userDoc.data() as User;
         
-        // Update user status to offline
-        await updateDoc(doc(db, 'users', user.uid), {
-          status: 'offline',
-          lastLogoutAt: Date.now()
-        });
+        // Stop user status tracking
+        await stopUserStatusTracking(user.uid);
         
         await logActivity(
           userData.id,

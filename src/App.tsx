@@ -16,6 +16,7 @@ import { Navbar } from '@/components/layout/Navbar';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { DeviceBlockModal } from '@/components/DeviceBlockModal';
 import { getDeviceType, isDesktopDevice } from '@/utils/deviceDetection';
+import { startCleanupService } from '@/utils/cleanupOfflineUsers';
 // import { loadFaceDetectionModels } from '@/utils/faceRecognition';
 
 function App() {
@@ -23,6 +24,9 @@ function App() {
   const [deviceType, setDeviceType] = useState<'mobile' | 'tablet' | 'desktop' | null>(null);
 
   useEffect(() => {
+    // Start cleanup service for offline users (disabled due to permissions)
+    // startCleanupService();
+    
     // Check device type on mount
     const currentDeviceType = getDeviceType();
     setDeviceType(currentDeviceType);
