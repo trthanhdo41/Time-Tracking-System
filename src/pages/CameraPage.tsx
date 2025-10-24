@@ -196,7 +196,7 @@ export const CameraPage: React.FC = () => {
           </div>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Live Camera Feed */}
           <Card>
             <CardHeader 

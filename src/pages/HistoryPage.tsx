@@ -162,21 +162,13 @@ export const HistoryPage: React.FC = () => {
         </Card>
 
         {/* Summary Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <Card gradient>
             <CardHeader title="Tổng Giờ Làm" icon={<ChartIcon />} />
             <div className="text-3xl font-bold text-primary-400">
               {formatDuration(Math.floor(stats.totalOnlineTime / 1000))}
             </div>
             <p className="text-sm text-gray-400 mt-2">{sessions.length} phiên</p>
-          </Card>
-
-          <Card gradient>
-            <CardHeader title="Trung Bình/Ngày" icon={<ChartIcon />} />
-            <div className="text-3xl font-bold text-green-400">
-              {formatDuration(Math.floor(stats.averagePerDay / 1000))}
-            </div>
-            <p className="text-sm text-gray-400 mt-2">Mỗi phiên</p>
           </Card>
 
           <Card gradient>
