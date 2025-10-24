@@ -283,31 +283,11 @@ export const StaffDashboard: React.FC = () => {
           </Card>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-2 mb-6">
-          <Button
-            variant={activeTab === 'dashboard' ? 'primary' : 'secondary'}
-            onClick={() => setActiveTab('dashboard')}
-          >
-            <ChartIcon className="w-4 h-4 mr-2" />
-            Dashboard
-          </Button>
-          <Button
-            variant={activeTab === 'images' ? 'primary' : 'secondary'}
-            onClick={() => setActiveTab('images')}
-          >
-            <CameraIcon className="w-4 h-4 mr-2" />
-            Thư Viện Ảnh
-          </Button>
-        </div>
 
-        {/* Content based on active tab */}
-        {activeTab === 'dashboard' ? (
-          <>
-            {/* Action Buttons */}
-            <Card className="mb-8">
-              <CardHeader title="Hành Động" />
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Action Buttons */}
+        <Card className="mb-8">
+          <CardHeader title="Hành Động" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             {status === 'offline' ? (
               <Button
                 variant="primary"
@@ -361,71 +341,83 @@ export const StaffDashboard: React.FC = () => {
             >
               Camera
             </Button>
+            
+            <Button
+              variant="secondary"
+              size="lg"
+              icon={<CameraIcon />}
+              onClick={() => setActiveTab('images')}
+            >
+              Thư Viện Ảnh
+            </Button>
           </div>
         </Card>
 
-        {/* Today's Activity */}
-        <Card>
-          <CardHeader 
-            title="Hoạt Động Hôm Nay" 
-            subtitle="Theo dõi các hoạt động của bạn"
-          />
-          <div className="space-y-3 max-h-[400px] overflow-y-auto">
-            {todayActivities.length > 0 ? (
-              todayActivities.map((activity: any, index: number) => (
-                <motion.div
-                  key={activity.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  className="glass p-4 rounded-xl flex items-center justify-between hover:bg-white/5 transition-colors"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                      activity.actionType === 'check_in' ? 'bg-green-500/20' :
-                      activity.actionType === 'check_out' ? 'bg-red-500/20' :
-                      activity.actionType === 'back_soon' ? 'bg-yellow-500/20' :
-                      activity.actionType === 'back_online' ? 'bg-blue-500/20' :
-                      activity.actionType === 'captcha_verify' ? 'bg-purple-500/20' :
-                      activity.actionType === 'face_verify' ? 'bg-pink-500/20' :
-                      'bg-gray-500/20'
-                    }`}>
-                      <CheckOutIcon className={`w-6 h-6 ${
-                        activity.actionType === 'check_in' ? 'text-green-500' :
-                        activity.actionType === 'check_out' ? 'text-red-500' :
-                        activity.actionType === 'back_soon' ? 'text-yellow-500' :
-                        activity.actionType === 'back_online' ? 'text-blue-500' :
-                        activity.actionType === 'captcha_verify' ? 'text-purple-500' :
-                        activity.actionType === 'face_verify' ? 'text-pink-500' :
-                        'text-gray-500'
-                      }`} />
-                    </div>
-                    <div>
-                      <p className="font-medium capitalize">
-                        {activity.actionType?.replace(/_/g, ' ') || 'Activity'}
-                      </p>
-                      <p className="text-sm text-gray-400">
-                        {new Date(activity.timestamp).toLocaleTimeString('vi-VN')}
-                      </p>
-                      {activity.description && (
-                        <p className="text-xs text-gray-500 mt-1">{activity.description}</p>
-                      )}
-                    </div>
-                  </div>
-                  <div className="text-green-500 font-medium text-sm">✓</div>
-                </motion.div>
-              ))
-            ) : (
-              <div className="text-center py-12 text-gray-500">
-                <p>Chưa có hoạt động hôm nay</p>
-                <p className="text-sm mt-2">Nhấn Check In để bắt đầu</p>
-              </div>
-            )}
-          </div>
-        </Card>
-          </>
-        ) : (
+        {/* Content based on active tab */}
+        {activeTab === 'images' ? (
           user && <ImageGallery userId={user.id} />
+        ) : (
+          <>
+            {/* Today's Activity */}
+            <Card>
+              <CardHeader 
+                title="Hoạt Động Hôm Nay" 
+                subtitle="Theo dõi các hoạt động của bạn"
+              />
+              <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                {todayActivities.length > 0 ? (
+                  todayActivities.map((activity: any, index: number) => (
+                    <motion.div
+                      key={activity.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="glass p-4 rounded-xl flex items-center justify-between hover:bg-white/5 transition-colors"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                          activity.actionType === 'check_in' ? 'bg-green-500/20' :
+                          activity.actionType === 'check_out' ? 'bg-red-500/20' :
+                          activity.actionType === 'back_soon' ? 'bg-yellow-500/20' :
+                          activity.actionType === 'back_online' ? 'bg-blue-500/20' :
+                          activity.actionType === 'captcha_verify' ? 'bg-purple-500/20' :
+                          activity.actionType === 'face_verify' ? 'bg-pink-500/20' :
+                          'bg-gray-500/20'
+                        }`}>
+                          <CheckOutIcon className={`w-6 h-6 ${
+                            activity.actionType === 'check_in' ? 'text-green-500' :
+                            activity.actionType === 'check_out' ? 'text-red-500' :
+                            activity.actionType === 'back_soon' ? 'text-yellow-500' :
+                            activity.actionType === 'back_online' ? 'text-blue-500' :
+                            activity.actionType === 'captcha_verify' ? 'text-purple-500' :
+                            activity.actionType === 'face_verify' ? 'text-pink-500' :
+                            'text-gray-500'
+                          }`} />
+                        </div>
+                        <div>
+                          <p className="font-medium capitalize">
+                            {activity.actionType?.replace(/_/g, ' ') || 'Activity'}
+                          </p>
+                          <p className="text-sm text-gray-400">
+                            {new Date(activity.timestamp).toLocaleTimeString('vi-VN')}
+                          </p>
+                          {activity.description && (
+                            <p className="text-xs text-gray-500 mt-1">{activity.description}</p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-green-500 font-medium text-sm">✓</div>
+                    </motion.div>
+                  ))
+                ) : (
+                  <div className="text-center py-12 text-gray-500">
+                    <p>Chưa có hoạt động hôm nay</p>
+                    <p className="text-sm mt-2">Nhấn Check In để bắt đầu</p>
+                  </div>
+                )}
+              </div>
+            </Card>
+          </>
         )}
       </div>
 
