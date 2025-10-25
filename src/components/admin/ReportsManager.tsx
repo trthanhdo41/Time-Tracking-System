@@ -221,12 +221,17 @@ export const ReportsManager: React.FC = () => {
                 transition={{ delay: index * 0.1 }}
                 className="glass p-3 rounded-lg"
               >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-white font-medium">{log.description || log.actionDetails || 'Activity'}</p>
-                    <p className="text-sm text-gray-400">
-                      {log.username || log.userName || 'N/A'} • {log.department || log.userDepartment || 'N/A'}
-                    </p>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 flex-1">
+                    <div className="w-10 h-10 rounded-full bg-primary-500/20 flex items-center justify-center text-primary-400 font-bold text-sm border border-primary-500/30 flex-shrink-0">
+                      {(log.username || log.userName)?.[0]?.toUpperCase() || '?'}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-white font-medium">{log.description || log.actionDetails || 'Activity'}</p>
+                      <p className="text-sm text-gray-400">
+                        {log.username || log.userName || 'N/A'} • {log.department || log.userDepartment || 'N/A'}
+                      </p>
+                    </div>
                   </div>
                   <div className="text-sm text-gray-500">
                     {formatDate(log.timestamp)}

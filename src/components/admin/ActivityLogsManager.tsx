@@ -200,24 +200,31 @@ export const ActivityLogsManager: React.FC = () => {
                 transition={{ delay: index * 0.05 }}
                 className="glass p-4 rounded-xl"
               >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className={`font-medium ${getActionTypeColor(log.actionType)}`}>
-                        {getActionTypeLabel(log.actionType)}
-                      </span>
-                      <span className="text-sm text-gray-400">
-                        {formatDate(log.timestamp)}
-                      </span>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-3 flex-1">
+                    {/* Avatar */}
+                    <div className="w-10 h-10 rounded-full bg-primary-500/20 flex items-center justify-center text-primary-400 font-bold text-sm border border-primary-500/30 flex-shrink-0 mt-1">
+                      {(log.username || log.userName)?.[0]?.toUpperCase() || '?'}
                     </div>
                     
-                    <p className="text-white mb-2">{log.description}</p>
-                    
-                    <div className="flex items-center gap-4 text-sm text-gray-400">
-                      <span><strong>User:</strong> {log.username || log.userName || 'N/A'}</span>
-                      <span><strong>Role:</strong> {log.userRole || 'N/A'}</span>
-                      <span><strong>Department:</strong> {log.department || log.userDepartment || 'N/A'}</span>
-                      <span><strong>Position:</strong> {log.position || log.userPosition || 'N/A'}</span>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className={`font-medium ${getActionTypeColor(log.actionType)}`}>
+                          {getActionTypeLabel(log.actionType)}
+                        </span>
+                        <span className="text-sm text-gray-400">
+                          {formatDate(log.timestamp)}
+                        </span>
+                      </div>
+                      
+                      <p className="text-white mb-2">{log.description}</p>
+                      
+                      <div className="flex items-center gap-4 text-sm text-gray-400">
+                        <span><strong>User:</strong> {log.username || log.userName || 'N/A'}</span>
+                        <span><strong>Role:</strong> {log.userRole || 'N/A'}</span>
+                        <span><strong>Department:</strong> {log.department || log.userDepartment || 'N/A'}</span>
+                        <span><strong>Position:</strong> {log.position || log.userPosition || 'N/A'}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
