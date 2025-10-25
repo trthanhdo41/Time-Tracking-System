@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
-import { User, Session } from '@/types';
-import { getUserSessions, updateUser, UserRole } from '@/services/userService';
+import { User, Session, UserRole } from '@/types';
+import { getUserSessions, updateUser } from '@/services/userService';
+import { resetUserPasswordByAdmin } from '@/services/auth';
 import { useAuthStore } from '@/store/authStore';
+import { Input } from '@/components/ui/Input';
 import toast from 'react-hot-toast';
 import { ClockIcon, EditIcon, XIcon } from '@/components/icons';
 
@@ -22,6 +24,8 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [showPasswordReset, setShowPasswordReset] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
   const [editData, setEditData] = useState({
     username: '',
     department: '',
@@ -64,6 +68,24 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
       onUpdate();
     } catch (error: any) {
       toast.error(error.message);
+    }
+  };
+
+  const handlePasswordReset = async () => {
+    if (!user || !currentUser) return;
+    
+    if (!newPassword || newPassword.length < 6) {
+      toast.error('Mật khẩu phải có ít nhất 6 ký tự');
+      return;
+    }
+    
+    try {
+      await resetUserPasswordByAdmin(user.id, newPassword);
+      toast.success('Đã cập nhật mật khẩu thành công!');
+      setNewPassword('');
+      setShowPasswordReset(false);
+    } catch (error: any) {
+      toast.error(error.message || 'Không thể cập nhật mật khẩu');
     }
   };
 
@@ -181,6 +203,40 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
               )}
             </div>
           </div>
+
+          {/* Password Reset Section */}
+          {editing && (
+            <div className="mt-4 pt-4 border-t border-dark-700">
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={() => setShowPasswordReset(!showPasswordReset)}
+                className="w-full"
+              >
+                {showPasswordReset ? 'Hủy đổi mật khẩu' : 'Đổi mật khẩu'}
+              </Button>
+              
+              {showPasswordReset && (
+                <div className="mt-3 space-y-2">
+                  <Input
+                    type="password"
+                    label="Mật khẩu mới"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Nhập mật khẩu mới (tối thiểu 6 ký tự)"
+                  />
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={handlePasswordReset}
+                    className="w-full"
+                  >
+                    Xác nhận đổi mật khẩu
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Work History */}
