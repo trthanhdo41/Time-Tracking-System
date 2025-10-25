@@ -150,7 +150,7 @@ export const StaffDashboard: React.FC = () => {
           if (currentSession.backSoonEvents && currentSession.backSoonEvents.length > 0) {
             currentSession.backSoonEvents.forEach((event: any) => {
               if (event.endTime) {
-                // Completed event
+                // Completed event - already in seconds
                 backSoonTime += Math.floor((event.endTime - event.startTime) / 1000);
               } else {
                 // Current ongoing event
@@ -159,8 +159,8 @@ export const StaffDashboard: React.FC = () => {
             });
           }
         } else {
-          // Online state - use stored totalBackSoonTime from session (backend calculated)
-          backSoonTime = Math.floor((currentSession.totalBackSoonTime || 0) / 1000);
+          // Online state - use stored totalBackSoonTime from session (already in seconds)
+          backSoonTime = currentSession.totalBackSoonTime || 0;
         }
         
         // Online time = total elapsed - back soon time
