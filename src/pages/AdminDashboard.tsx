@@ -52,7 +52,7 @@ export const AdminDashboard: React.FC = () => {
     offline: 0
   });
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'users' | 'settings' | 'images' | 'activity' | 'reports' | 'backsoon' | 'allimages' | 'cleanup' | 'errors'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'images' | 'activity' | 'reports' | 'backsoon' | 'allimages' | 'cleanup' | 'errors'>('users');
   
   // Form states
   const [newUserData, setNewUserData] = useState({
@@ -263,13 +263,6 @@ export const AdminDashboard: React.FC = () => {
             Quản Lý Nhân Viên
           </Button>
           <Button
-            variant={activeTab === 'settings' ? 'primary' : 'secondary'}
-            onClick={() => setActiveTab('settings')}
-            icon={<SettingsIcon />}
-          >
-            Cài Đặt CAPTCHA
-          </Button>
-          <Button
             variant={activeTab === 'images' ? 'primary' : 'secondary'}
             onClick={() => setActiveTab('images')}
             icon={<ImageIcon />}
@@ -430,26 +423,6 @@ export const AdminDashboard: React.FC = () => {
         )}
 
         {/* System Settings Tab */}
-        {activeTab === 'settings' && (
-          <Card>
-            <CardHeader title="Cài Đặt CAPTCHA" icon={<SettingsIcon />} />
-            <div className="p-6">
-              <p className="text-gray-400 mb-6">
-                Cấu hình hệ thống CAPTCHA và Face Verification
-              </p>
-              <div className="flex gap-3">
-                <Button
-                  variant="primary"
-                  icon={<SettingsIcon />}
-                  onClick={() => navigate('/system-settings')}
-                >
-                  Mở Cài Đặt Hệ Thống
-                </Button>
-              </div>
-            </div>
-          </Card>
-        )}
-
         {/* Image Delete Requests Tab */}
         {activeTab === 'images' && (
           <ImageDeleteRequestsManager />
