@@ -32,6 +32,8 @@ export const formatDateTime = (timestamp: number): string => {
 };
 
 export const formatDuration = (seconds: number): string => {
+  if (isNaN(seconds) || seconds < 0) return '0s';
+  
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
   const secs = seconds % 60;
@@ -39,9 +41,22 @@ export const formatDuration = (seconds: number): string => {
   const parts = [];
   if (hours > 0) parts.push(`${hours}h`);
   if (minutes > 0) parts.push(`${minutes}m`);
-  if (secs > 0 || parts.length === 0) parts.push(`${secs}s`);
   
-  return parts.join(' ');
+  // Always show seconds if less than 1 hour
+  if (hours === 0) {
+    if (minutes === 0) {
+      // Show only seconds if less than 1 minute
+      parts.push(`${secs}s`);
+    } else {
+      // Show minutes and seconds
+      parts.push(`${secs}s`);
+    }
+  } else {
+    // If hours > 0, also show seconds
+    parts.push(`${secs}s`);
+  }
+  
+  return parts.length > 0 ? parts.join(' ') : '0s';
 };
 
 export const getServerTimestamp = (): number => {
