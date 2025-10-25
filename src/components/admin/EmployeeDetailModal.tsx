@@ -28,6 +28,7 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
   const [newPassword, setNewPassword] = useState('');
   const [editData, setEditData] = useState({
     username: '',
+    email: '',
     department: '',
     position: '',
     role: 'staff' as UserRole
@@ -37,6 +38,7 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
     if (user) {
       setEditData({
         username: user.username,
+        email: user.email,
         department: user.department,
         position: user.position,
         role: user.role
@@ -153,17 +155,32 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
               </div>
             )}
             <div className="flex-1">
-              {editing ? (
-                <input
-                  type="text"
-                  value={editData.username}
-                  onChange={(e) => setEditData({ ...editData, username: e.target.value })}
-                  className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white"
-                />
-              ) : (
-                <h3 className="text-lg font-bold">{user.username}</h3>
-              )}
-              <p className="text-gray-400 text-sm">{user.email}</p>
+              <div className="mb-2">
+                <label className="block text-xs text-gray-400 mb-1">Tên</label>
+                {editing ? (
+                  <input
+                    type="text"
+                    value={editData.username}
+                    onChange={(e) => setEditData({ ...editData, username: e.target.value })}
+                    className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white text-sm"
+                  />
+                ) : (
+                  <h3 className="text-lg font-bold">{user.username}</h3>
+                )}
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Email</label>
+                {editing ? (
+                  <input
+                    type="email"
+                    value={editData.email}
+                    onChange={(e) => setEditData({ ...editData, email: e.target.value })}
+                    className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white text-sm"
+                  />
+                ) : (
+                  <p className="text-gray-400 text-sm">{user.email}</p>
+                )}
+              </div>
             </div>
             <Button
               variant="secondary"
