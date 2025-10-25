@@ -40,6 +40,7 @@ export const StaffDashboard: React.FC = () => {
   const [showFaceVerification, setShowFaceVerification] = useState(false);
   const [currentTime, setCurrentTime] = useState(getVietnamTimeString());
   const [activeTab, setActiveTab] = useState<'dashboard' | 'images'>('dashboard');
+  const [realTimeOnlineTime, setRealTimeOnlineTime] = useState(0);
   const [showCheckInCamera, setShowCheckInCamera] = useState(false);
   const [todayActivities, setTodayActivities] = useState<any[]>([]);
   const [settings, setSettings] = useState<SystemSettings | null>(null);
@@ -117,13 +118,53 @@ export const StaffDashboard: React.FC = () => {
   }, [user, currentSession]); // Refetch when session changes
 
 
-  // Update current time
+  // Update current time and online time
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentTime(getVietnamTimeString());
+      
+      // Calculate real-time online time if session exists
+      if (currentSession && (status === 'online' || status === 'back_soon')) {
+        // Get checkInTime
+        const sessionCheckInTime = currentSession.checkInTime;
+        if (!sessionCheckInTime) return;
+        
+        let checkInTime: number;
+        
+        if (typeof sessionCheckInTime === 'object' && 'seconds' in sessionCheckInTime) {
+          // Firebase Timestamp
+          checkInTime = sessionCheckInTime.seconds * 1000;
+        } else if (typeof sessionCheckInTime === 'number') {
+          checkInTime = sessionCheckInTime;
+        } else {
+          return;
+        }
+        
+        // Calculate current online time
+        const now = Date.now();
+        const elapsedTime = Math.floor((now - checkInTime) / 1000); // in seconds
+        
+        // Subtract back soon time
+        const backSoonTime = currentSession.totalBackSoonTime || 0;
+        
+        // If currently in back soon, add current back soon duration
+        let currentBackSoonDuration = 0;
+        if (status === 'back_soon' && currentSession.backSoonEvents) {
+          const lastEvent = currentSession.backSoonEvents[currentSession.backSoonEvents.length - 1];
+          if (lastEvent && !lastEvent.endTime) {
+            currentBackSoonDuration = Math.floor((now - lastEvent.startTime) / 1000);
+          }
+        }
+        
+        // Calculate final online time
+        const onlineTime = Math.max(0, elapsedTime - backSoonTime - currentBackSoonDuration);
+        setRealTimeOnlineTime(onlineTime);
+      } else {
+        setRealTimeOnlineTime(0);
+      }
     }, 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [currentSession, status]);
 
   // CAPTCHA periodic trigger
   useEffect(() => {
@@ -252,9 +293,7 @@ export const StaffDashboard: React.FC = () => {
                   icon={<ChartIcon className="w-6 h-6" />}
                 />
                 <div className="text-3xl font-bold text-primary-400 font-mono">
-                  {currentSession?.totalOnlineTime 
-                    ? formatDuration(currentSession.totalOnlineTime) 
-                    : '0s'}
+                  {formatDuration(realTimeOnlineTime)}
                 </div>
                 <p className="text-sm text-gray-400 mt-2">Hôm nay</p>
               </Card>
