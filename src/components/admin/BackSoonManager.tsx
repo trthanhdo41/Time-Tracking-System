@@ -116,8 +116,26 @@ export const BackSoonManager: React.FC = () => {
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-full bg-yellow-500/20 flex items-center justify-center">
-                        <BackSoonIcon className="w-6 h-6 text-yellow-400" />
+                      {user.faceImageUrl ? (
+                        <img 
+                          src={user.faceImageUrl} 
+                          alt={user.username}
+                          className="w-12 h-12 rounded-full object-cover border border-primary-500/30"
+                          onError={(e) => {
+                            const img = e.target as HTMLImageElement;
+                            img.style.display = 'none';
+                            img.nextElementSibling?.classList.remove('hidden');
+                          }}
+                        />
+                      ) : null}
+                      <div className={`w-12 h-12 rounded-full ${user.faceImageUrl ? 'hidden' : 'bg-yellow-500/20'} flex items-center justify-center ${!user.faceImageUrl ? 'border border-primary-500/30' : ''}`}>
+                        {user.faceImageUrl ? null : (
+                          <>
+                            {user.username?.[0]?.toUpperCase() || (
+                              <BackSoonIcon className="w-6 h-6 text-yellow-400" />
+                            )}
+                          </>
+                        )}
                       </div>
                       <div>
                         <p className="font-medium text-white">{user.username}</p>
@@ -155,11 +173,21 @@ export const BackSoonManager: React.FC = () => {
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className={`w-3 h-3 rounded-full ${
-                      user.status === 'online' ? 'bg-green-500' :
-                      user.status === 'back_soon' ? 'bg-yellow-500' :
-                      'bg-gray-500'
-                    }`}></div>
+                    {user.faceImageUrl ? (
+                      <img 
+                        src={user.faceImageUrl} 
+                        alt={user.username}
+                        className="w-10 h-10 rounded-full object-cover border border-primary-500/30"
+                        onError={(e) => {
+                          const img = e.target as HTMLImageElement;
+                          img.style.display = 'none';
+                          img.nextElementSibling?.classList.remove('hidden');
+                        }}
+                      />
+                    ) : null}
+                    <div className={`w-10 h-10 rounded-full ${user.faceImageUrl ? 'hidden' : 'bg-primary-500/20'} flex items-center justify-center text-primary-400 font-bold text-sm ${!user.faceImageUrl ? 'border border-primary-500/30' : ''}`}>
+                      {user.faceImageUrl ? null : user.username?.[0]?.toUpperCase()}
+                    </div>
                     <div>
                       <p className="font-medium text-white">{user.username}</p>
                       <p className="text-sm text-gray-400">
