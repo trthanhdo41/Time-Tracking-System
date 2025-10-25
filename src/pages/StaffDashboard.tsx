@@ -123,12 +123,17 @@ export const StaffDashboard: React.FC = () => {
     const interval = setInterval(() => {
       setCurrentTime(getVietnamTimeString());
       
-      if (currentSession && status === 'online') {
+      if (currentSession && (status === 'online' || status === 'back_soon')) {
         // Handle both Timestamp and number formats
         const checkInTime = currentSession.checkInTime;
+        if (!checkInTime) {
+          console.warn('No checkInTime in session');
+          return;
+        }
+        
         let startTime: number;
         
-        if (checkInTime && typeof checkInTime === 'object' && 'seconds' in checkInTime) {
+        if (typeof checkInTime === 'object' && 'seconds' in checkInTime) {
           // Firebase Timestamp format
           startTime = checkInTime.seconds * 1000;
         } else if (typeof checkInTime === 'number') {
@@ -141,10 +146,23 @@ export const StaffDashboard: React.FC = () => {
         
         const duration = calculateDuration(startTime);
         
-        // Subtract totalBackSoonTime if available
-        const totalBackSoonTime = currentSession.totalBackSoonTime || 0;
-        const actualOnlineTime = Math.max(0, duration - totalBackSoonTime);
+        // Calculate totalBackSoonTime including current event
+        let totalBackSoonTime = currentSession.totalBackSoonTime || 0;
         
+        // If currently in back_soon mode, add current back soon duration
+        if (status === 'back_soon') {
+          const backSoonEvents = currentSession.backSoonEvents || [];
+          if (backSoonEvents.length > 0) {
+            const lastEvent = backSoonEvents[backSoonEvents.length - 1];
+            if (!lastEvent.endTime) {
+              // Currently in a back soon event, add current duration
+              const currentBackSoonDuration = Date.now() - lastEvent.startTime;
+              totalBackSoonTime += currentBackSoonDuration;
+            }
+          }
+        }
+        
+        const actualOnlineTime = Math.max(0, duration - totalBackSoonTime);
         
         setOnlineTime(actualOnlineTime);
       }
@@ -290,7 +308,24 @@ export const StaffDashboard: React.FC = () => {
                   icon={<BackSoonIcon className="w-6 h-6" />}
                 />
                 <div className="text-3xl font-bold text-yellow-400 font-mono">
-                  {formatDuration(currentSession?.totalBackSoonTime || 0)}
+                  {(() => {
+                    let backSoonTime = currentSession?.totalBackSoonTime || 0;
+                    
+                    // If currently in back_soon mode, add current duration
+                    if (status === 'back_soon' && currentSession?.backSoonEvents) {
+                      const backSoonEvents = currentSession.backSoonEvents;
+                      if (backSoonEvents.length > 0) {
+                        const lastEvent = backSoonEvents[backSoonEvents.length - 1];
+                        if (!lastEvent.endTime) {
+                          // Currently in a back soon event, add current duration
+                          const currentBackSoonDuration = Date.now() - lastEvent.startTime;
+                          backSoonTime += currentBackSoonDuration;
+                        }
+                      }
+                    }
+                    
+                    return formatDuration(backSoonTime);
+                  })()}
                 </div>
                 <p className="text-sm text-gray-400 mt-2">Tổng hôm nay</p>
               </Card>
