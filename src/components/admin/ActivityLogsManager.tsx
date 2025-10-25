@@ -8,6 +8,8 @@ import { HistoryIcon, SearchIcon, FilterIcon, DownloadIcon } from '@/components/
 import { getAllActivityLogs } from '@/services/activityLog';
 import { useAuthStore } from '@/store/authStore';
 import { formatDuration } from '@/utils/time';
+import { db } from '@/config/firebase';
+import { collection, doc, getDoc } from 'firebase/firestore';
 
 interface ActivityLog {
   id: string;
@@ -25,6 +27,7 @@ interface ActivityLog {
 export const ActivityLogsManager: React.FC = () => {
   const { user } = useAuthStore();
   const [logs, setLogs] = useState<ActivityLog[]>([]);
+  const [userAvatars, setUserAvatars] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterDepartment, setFilterDepartment] = useState('');
@@ -38,6 +41,26 @@ export const ActivityLogsManager: React.FC = () => {
         setLoading(true);
         const activityLogs = await getAllActivityLogs();
         setLogs(activityLogs);
+        
+        // Fetch user avatars
+        const userIds = Array.from(new Set(activityLogs.map(log => log.userId).filter(Boolean)));
+        const avatars: Record<string, string> = {};
+        
+        await Promise.all(userIds.map(async (userId) => {
+          try {
+            const userDoc = await getDoc(doc(db, 'users', userId));
+            if (userDoc.exists()) {
+              const userData = userDoc.data();
+              if (userData.faceImageUrl) {
+                avatars[userId] = userData.faceImageUrl;
+              }
+            }
+          } catch (error) {
+            console.error(`Error fetching user ${userId}:`, error);
+          }
+        }));
+        
+        setUserAvatars(avatars);
       } catch (error: any) {
         console.error('Error loading activity logs:', error);
       } finally {
@@ -203,7 +226,19 @@ export const ActivityLogsManager: React.FC = () => {
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-start gap-3 flex-1">
                     {/* Avatar */}
-                    <div className="w-10 h-10 rounded-full bg-primary-500/20 flex items-center justify-center text-primary-400 font-bold text-sm border border-primary-500/30 flex-shrink-0 mt-1">
+                    {userAvatars[log.userId] ? (
+                      <img 
+                        src={userAvatars[log.userId]} 
+                        alt={log.username || log.userName}
+                        className="w-10 h-10 rounded-full object-cover border border-primary-500/30 flex-shrink-0 mt-1"
+                        onError={(e) => {
+                          const img = e.target as HTMLImageElement;
+                          img.style.display = 'none';
+                          img.nextElementSibling?.classList.remove('hidden');
+                        }}
+                      />
+                    ) : null}
+                    <div className={`w-10 h-10 rounded-full bg-primary-500/20 flex items-center justify-center text-primary-400 font-bold text-sm border border-primary-500/30 flex-shrink-0 mt-1 ${userAvatars[log.userId] ? 'hidden' : ''}`}>
                       {(log.username || log.userName)?.[0]?.toUpperCase() || '?'}
                     </div>
                     
