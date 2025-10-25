@@ -366,9 +366,23 @@ export const AdminDashboard: React.FC = () => {
                       >
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-primary-500/20 flex items-center justify-center">
-                              <UsersIcon className="w-4 h-4 text-primary-400" />
-                            </div>
+                            {user.faceImageUrl ? (
+                              <img 
+                                src={user.faceImageUrl} 
+                                alt={user.username}
+                                className="w-10 h-10 rounded-full object-cover border border-primary-500/30"
+                                onError={(e) => {
+                                  // Fallback to initial if image fails
+                                  const img = e.target as HTMLImageElement;
+                                  img.style.display = 'none';
+                                  img.nextElementSibling?.classList.remove('hidden');
+                                }}
+                              />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-primary-500/20 flex items-center justify-center text-primary-400 font-bold text-sm border border-primary-500/30">
+                                {user.username?.[0]?.toUpperCase() || '?'}
+                              </div>
+                            )}
                             <span className="font-medium">{user.username}</span>
                           </div>
                         </td>
