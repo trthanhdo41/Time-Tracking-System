@@ -152,8 +152,8 @@ export const updateSessionBackOnline = async (
       }
     }
     
-    // Calculate total back soon time
-    const totalBackSoonTime = backSoonEvents.reduce((sum, event) => sum + (event.duration || 0), 0);
+    // Calculate total back soon time (in seconds)
+    const totalBackSoonTime = Math.floor(backSoonEvents.reduce((sum, event) => sum + (event.duration || 0), 0) / 1000);
 
     await updateDoc(sessionRef, {
       status: 'online',
@@ -222,8 +222,8 @@ export const checkOutSession = async (
       }
     }
     
-    // Calculate total back soon time
-    const totalBackSoonTime = backSoonEvents.reduce((sum, event) => sum + (event.duration || 0), 0);
+    // Calculate total back soon time (in seconds)
+    const totalBackSoonTime = Math.floor(backSoonEvents.reduce((sum, event) => sum + (event.duration || 0), 0) / 1000);
     
     // Calculate total online time
     const totalOnlineTime = Math.floor((now - checkInTime - totalBackSoonTime) / 1000); // in seconds
