@@ -36,6 +36,7 @@ import { ReportsManager } from '@/components/admin/ReportsManager';
 import { BackSoonManager } from '@/components/admin/BackSoonManager';
 import { AllImagesManager } from '@/components/admin/AllImagesManager';
 import { DataCleanupManager } from '@/components/admin/DataCleanupManager';
+import { ErrorReportsManager } from '@/components/admin/ErrorReportsManager';
 import toast from 'react-hot-toast';
 
 export const AdminDashboard: React.FC = () => {
@@ -51,7 +52,7 @@ export const AdminDashboard: React.FC = () => {
     offline: 0
   });
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'users' | 'settings' | 'images' | 'activity' | 'reports' | 'backsoon' | 'allimages' | 'cleanup'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'settings' | 'images' | 'activity' | 'reports' | 'backsoon' | 'allimages' | 'cleanup' | 'errors'>('users');
   
   // Form states
   const [newUserData, setNewUserData] = useState({
@@ -310,6 +311,13 @@ export const AdminDashboard: React.FC = () => {
           >
             Dọn Dẹp
           </Button>
+          <Button
+            variant={activeTab === 'errors' ? 'primary' : 'secondary'}
+            onClick={() => setActiveTab('errors')}
+            icon={<NotificationIcon />}
+          >
+            Báo Cáo Lỗi
+          </Button>
         </div>
 
         {/* Tab Content */}
@@ -470,6 +478,11 @@ export const AdminDashboard: React.FC = () => {
         {/* Data Cleanup Tab */}
         {activeTab === 'cleanup' && (
           <DataCleanupManager />
+        )}
+
+        {/* Error Reports Tab */}
+        {activeTab === 'errors' && (
+          <ErrorReportsManager />
         )}
       </div>
 
