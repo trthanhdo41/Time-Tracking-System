@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/StatusBadge';
-import { AlertTriangleIcon, DownloadIcon, ImageIcon } from '@/components/icons';
+import { XIcon, DownloadIcon, ImageIcon } from '@/components/icons';
 import { db } from '@/config/firebase';
 import { collection, query, getDocs, orderBy, updateDoc, doc } from 'firebase/firestore';
 import { useAuthStore } from '@/store/authStore';
@@ -83,7 +83,7 @@ export const ErrorReportsManager: React.FC = () => {
   if (loading) {
     return (
       <Card>
-        <CardHeader title="Báo Cáo Lỗi" icon={<AlertTriangleIcon />} />
+        <CardHeader title="Báo Cáo Lỗi" icon={<XIcon />} />
         <div className="p-6">
           <div className="text-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500 mx-auto mb-4"></div>
@@ -99,7 +99,7 @@ export const ErrorReportsManager: React.FC = () => {
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
-          <CardHeader title="Tổng Báo Cáo" icon={<AlertTriangleIcon />} />
+          <CardHeader title="Tổng Báo Cáo" icon={<XIcon />} />
           <div className="p-6">
             <div className="text-3xl font-bold text-primary-400 mb-2">
               {reports.length}
@@ -109,7 +109,7 @@ export const ErrorReportsManager: React.FC = () => {
         </Card>
 
         <Card>
-          <CardHeader title="Chờ Xử Lý" icon={<AlertTriangleIcon />} />
+          <CardHeader title="Chờ Xử Lý" icon={<XIcon />} />
           <div className="p-6">
             <div className="text-3xl font-bold text-yellow-400 mb-2">
               {reports.filter(r => r.status === 'pending').length}
@@ -119,7 +119,7 @@ export const ErrorReportsManager: React.FC = () => {
         </Card>
 
         <Card>
-          <CardHeader title="Đã Xử Lý" icon={<AlertTriangleIcon />} />
+          <CardHeader title="Đã Xử Lý" icon={<XIcon />} />
           <div className="p-6">
             <div className="text-3xl font-bold text-green-400 mb-2">
               {reports.filter(r => r.status === 'resolved').length}
@@ -130,12 +130,12 @@ export const ErrorReportsManager: React.FC = () => {
       </div>
 
       {/* Reports List */}
-      <Card>
-        <CardHeader title="Danh Sách Báo Cáo Lỗi" icon={<AlertTriangleIcon />} />
+              <Card>
+          <CardHeader title="Danh Sách Báo Cáo Lỗi" icon={<XIcon />} />
         <div className="p-6">
           {reports.length === 0 ? (
             <div className="text-center py-8">
-              <AlertTriangleIcon className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+              <XIcon className="w-16 h-16 text-gray-600 mx-auto mb-4" />
               <p className="text-gray-400">Không có báo cáo lỗi nào</p>
             </div>
           ) : (
