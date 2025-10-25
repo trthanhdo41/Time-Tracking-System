@@ -252,7 +252,7 @@ export const StaffDashboard: React.FC = () => {
     }
   };
 
-  const handleBackSoon = async (reason: string) => {
+  const handleBackSoon = async (reason?: 'meeting' | 'wc' | 'other', customReason?: string) => {
     if (!user || !currentSession) return;
     
     try {
@@ -260,10 +260,14 @@ export const StaffDashboard: React.FC = () => {
         // Return to online
         await updateSessionBackOnline(currentSession.id, user);
         toast.success('Đã trở lại làm việc!');
-      } else {
-        // Go back soon
-        await updateSessionBackSoon(currentSession.id, reason, user);
-        toast.success(`Back Soon: ${reason}`);
+      } else if (reason) {
+        // Go back soon - construct the reason text
+        let reasonText = reason;
+        if (reason === 'other' && customReason) {
+          reasonText = customReason as any;
+        }
+        await updateSessionBackSoon(currentSession.id, reasonText, user);
+        toast.success(`Back Soon: ${reasonText}`);
       }
       setShowBackSoonModal(false);
     } catch (error: any) {
@@ -335,7 +339,7 @@ export const StaffDashboard: React.FC = () => {
                   icon={<BackSoonIcon />}
                   onClick={() => {
                     if (status === 'back_soon') {
-                      handleBackSoon('Return to work');
+                      handleBackSoon();
                     } else {
                       setShowBackSoonModal(true);
                     }

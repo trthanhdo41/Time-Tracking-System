@@ -40,7 +40,6 @@ import { AllImagesManager } from '@/components/admin/AllImagesManager';
 import { DataCleanupManager } from '@/components/admin/DataCleanupManager';
 import { ErrorReportsManager } from '@/components/admin/ErrorReportsManager';
 import { EmployeeDetailModal } from '@/components/admin/EmployeeDetailModal';
-import { AdminNavigation } from '@/components/layout/AdminNavigation';
 import toast from 'react-hot-toast';
 
 export const AdminDashboard: React.FC = () => {
