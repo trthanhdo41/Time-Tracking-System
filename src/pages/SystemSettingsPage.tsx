@@ -10,7 +10,7 @@ import {
   SystemSettings 
 } from '@/services/systemSettingsService';
 import toast from 'react-hot-toast';
-import { SettingsIcon } from '@/components/icons';
+import { SettingsIcon, LockIcon, FaceIcon, InfoIcon, WarningIcon } from '@/components/icons';
 
 export const SystemSettingsPage: React.FC = () => {
   const { user } = useAuthStore();
@@ -144,7 +144,8 @@ export const SystemSettingsPage: React.FC = () => {
             className="bg-dark-800 rounded-xl p-6 border border-dark-700"
           >
             <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-              🔐 CAPTCHA Settings
+              <LockIcon className="w-6 h-6 text-primary-500" />
+              CAPTCHA Settings
             </h2>
             
             <div className="space-y-4">
@@ -208,7 +209,8 @@ export const SystemSettingsPage: React.FC = () => {
             className="bg-dark-800 rounded-xl p-6 border border-dark-700"
           >
             <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-              👤 Face Verification Settings
+              <FaceIcon className="w-6 h-6 text-primary-500" />
+              Face Verification Settings
             </h2>
             
             <div className="space-y-4">
@@ -248,10 +250,13 @@ export const SystemSettingsPage: React.FC = () => {
               </div>
 
               <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
-                <p className="text-sm text-yellow-400">
-                  ⚠️ <strong>Lưu ý:</strong> Threshold quá cao có thể gây false negative (từ chối người đúng). 
-                  Nên test kỹ trước khi áp dụng.
-                </p>
+                <div className="flex items-start gap-2">
+                  <WarningIcon className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-yellow-400">
+                    <strong>Lưu ý:</strong> Threshold quá cao có thể gây false negative (từ chối người đúng). 
+                    Nên test kỹ trước khi áp dụng.
+                  </p>
+                </div>
               </div>
             </div>
           </motion.div>
@@ -263,7 +268,8 @@ export const SystemSettingsPage: React.FC = () => {
             className="bg-dark-800 rounded-xl p-6 border border-dark-700 lg:col-span-2"
           >
             <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-              ⚙️ General Settings
+              <SettingsIcon className="w-6 h-6 text-primary-500" />
+              General Settings
             </h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -331,7 +337,7 @@ export const SystemSettingsPage: React.FC = () => {
                 Đang lưu...
               </>
             ) : (
-              '💾 Lưu & Đồng Bộ'
+              'Lưu & Đồng Bộ'
             )}
           </Button>
         </motion.div>
@@ -343,8 +349,9 @@ export const SystemSettingsPage: React.FC = () => {
           transition={{ delay: 0.3 }}
           className="mt-8 bg-blue-500/10 border border-blue-500/20 rounded-xl p-6"
         >
-          <h3 className="text-lg font-semibold text-blue-400 mb-3">
-            ℹ️ Về Realtime Sync
+          <h3 className="text-lg font-semibold text-blue-400 mb-3 flex items-center gap-2">
+            <InfoIcon className="w-5 h-5" />
+            Về Realtime Sync
           </h3>
           <ul className="space-y-2 text-sm text-gray-300">
             <li>• Mọi thay đổi sẽ được lưu vào Firebase và đồng bộ realtime đến tất cả client</li>

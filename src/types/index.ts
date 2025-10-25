@@ -13,6 +13,7 @@ export type ActionType =
   | 'face_verification_failed'
   | 'delete_image_request'
   | 'account_created'
+  | 'account_updated'
   | 'account_deleted'
   | 'password_reset'
   | 'permission_changed';

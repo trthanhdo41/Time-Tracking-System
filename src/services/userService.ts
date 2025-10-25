@@ -7,6 +7,7 @@ import {
   deleteDoc, 
   query, 
   where,
+  orderBy,
   onSnapshot
 } from 'firebase/firestore';
 import { 
@@ -14,8 +15,9 @@ import {
   signOut
 } from 'firebase/auth';
 import { db, auth } from '@/config/firebase';
-import { User, UserRole } from '@/types';
+import { User, UserRole, Session } from '@/types';
 import { logActivity } from './activityLog';
+import { Timestamp } from 'firebase/firestore';
 
 /**
  * Get all users from Firestore
@@ -154,6 +156,81 @@ export const deleteUser = async (userId: string, performedBy: User): Promise<voi
   } catch (error) {
     console.error('Error deleting user:', error);
     throw new Error('Không thể xóa người dùng');
+  }
+};
+
+/**
+ * Update user information
+ */
+export const updateUser = async (
+  userId: string,
+  updates: Partial<Pick<User, 'username' | 'department' | 'position' | 'role' | 'faceImageUrl'>>,
+  performedBy: User
+): Promise<void> => {
+  try {
+    const userDoc = await getDocs(query(collection(db, 'users'), where('id', '==', userId)));
+    
+    if (userDoc.empty) {
+      throw new Error('Không tìm thấy người dùng');
+    }
+
+    const userData = userDoc.docs[0].data() as User;
+    const userDocRef = doc(db, 'users', userId);
+
+    // Update Firestore
+    await setDoc(userDocRef, {
+      ...userData,
+      ...updates,
+      updatedAt: Date.now()
+    }, { merge: true });
+
+    // Log activity
+    const changes = Object.keys(updates).join(', ');
+    await logActivity(
+      userId,
+      userData.username,
+      userData.role,
+      userData.department,
+      userData.position,
+      'account_updated',
+      `Thông tin tài khoản được cập nhật: ${changes} bởi ${performedBy.username}`,
+      performedBy.id,
+      performedBy.role,
+      performedBy.department
+    );
+  } catch (error) {
+    console.error('Error updating user:', error);
+    throw new Error('Không thể cập nhật thông tin người dùng');
+  }
+};
+
+/**
+ * Get all sessions for a specific user
+ */
+export const getUserSessions = async (userId: string): Promise<Session[]> => {
+  try {
+    const sessionsRef = collection(db, 'sessions');
+    const q = query(
+      sessionsRef,
+      where('userId', '==', userId),
+      orderBy('checkInTime', 'desc')
+    );
+    const snapshot = await getDocs(q);
+    
+    return snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        ...data,
+        id: doc.id,
+        checkInTime: data.checkInTime instanceof Timestamp ? data.checkInTime.toMillis() : data.checkInTime,
+        checkOutTime: data.checkOutTime instanceof Timestamp ? data.checkOutTime?.toMillis() : data.checkOutTime,
+        lastActivityTime: data.lastActivityTime instanceof Timestamp ? data.lastActivityTime.toMillis() : data.lastActivityTime,
+        lastCaptchaTime: data.lastCaptchaTime instanceof Timestamp ? data.lastCaptchaTime?.toMillis() : data.lastCaptchaTime,
+      } as Session;
+    });
+  } catch (error) {
+    console.error('Error getting user sessions:', error);
+    throw new Error('Không thể tải lịch sử làm việc');
   }
 };
 
