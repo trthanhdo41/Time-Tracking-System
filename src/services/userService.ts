@@ -164,7 +164,7 @@ export const deleteUser = async (userId: string, performedBy: User): Promise<voi
  */
 export const updateUser = async (
   userId: string,
-  updates: Partial<Pick<User, 'username' | 'department' | 'position' | 'role' | 'faceImageUrl'>>,
+  updates: Partial<Pick<User, 'username' | 'email' | 'department' | 'position' | 'role' | 'faceImageUrl'>>,
   performedBy: User
 ): Promise<void> => {
   try {
