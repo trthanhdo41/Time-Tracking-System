@@ -89,22 +89,22 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
 
   return (
     <Modal isOpen={!!user} onClose={onClose} size="lg">
-      <div className="p-6">
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold">Chi Tiết Nhân Viên</h2>
+      <div className="p-4">
+        <div className="mb-4">
+          <h2 className="text-xl font-bold">Chi Tiết Nhân Viên</h2>
         </div>
 
         {/* Employee Info */}
-        <div className="bg-dark-800 rounded-lg p-4 mb-6">
-          <div className="flex items-center gap-4 mb-4">
+        <div className="bg-dark-800 rounded-lg p-4 mb-4">
+          <div className="flex items-center gap-3 mb-3">
             {user.faceImageUrl ? (
               <img
                 src={user.faceImageUrl}
                 alt={user.username}
-                className="w-20 h-20 rounded-full object-cover border border-primary-500/30"
+                className="w-16 h-16 rounded-full object-cover border border-primary-500/30"
               />
             ) : (
-              <div className="w-20 h-20 rounded-full bg-primary-500/20 flex items-center justify-center text-primary-400 font-bold text-2xl border border-primary-500/30">
+              <div className="w-16 h-16 rounded-full bg-primary-500/20 flex items-center justify-center text-primary-400 font-bold text-xl border border-primary-500/30">
                 {user.username?.[0]?.toUpperCase() || '?'}
               </div>
             )}
@@ -117,9 +117,9 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
                   className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white"
                 />
               ) : (
-                <h3 className="text-xl font-bold">{user.username}</h3>
+                <h3 className="text-lg font-bold">{user.username}</h3>
               )}
-              <p className="text-gray-400">{user.email}</p>
+              <p className="text-gray-400 text-sm">{user.email}</p>
             </div>
             <Button
               variant="secondary"
@@ -131,7 +131,7 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
             </Button>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm text-gray-400 mb-1">Phòng Ban</label>
               {editing ? (
@@ -163,20 +163,20 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
 
         {/* Work History */}
         <div>
-          <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+          <h3 className="text-lg font-bold mb-3 flex items-center gap-2">
             <ClockIcon className="w-5 h-5" />
             Lịch Sử Làm Việc
           </h3>
           
           {loading ? (
-            <div className="text-center py-8 text-gray-400">Đang tải...</div>
+            <div className="text-center py-6 text-gray-400">Đang tải...</div>
           ) : sessions.length === 0 ? (
-            <div className="text-center py-8 text-gray-400">Chưa có lịch sử làm việc</div>
+            <div className="text-center py-6 text-gray-400">Chưa có lịch sử làm việc</div>
           ) : (
-            <div className="space-y-2 max-h-96 overflow-y-auto">
+            <div className="space-y-2 max-h-64 overflow-y-auto">
               {sessions.map((session) => (
-                <div key={session.id} className="bg-dark-800 rounded-lg p-4">
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                <div key={session.id} className="bg-dark-800 rounded-lg p-3">
+                  <div className="grid grid-cols-2 gap-3 text-sm">
                     <div>
                       <p className="text-gray-400">Check In</p>
                       <p className="text-white">{formatTime(session.checkInTime)}</p>
