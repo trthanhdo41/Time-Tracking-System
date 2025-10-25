@@ -9,7 +9,7 @@ import toast from 'react-hot-toast';
 interface BackSoonModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (reason: string, customReason?: string) => void;
+  onSubmit: (reason: 'meeting' | 'wc' | 'other', customReason?: string) => void;
 }
 
 export const BackSoonModal: React.FC<BackSoonModalProps> = ({
@@ -61,8 +61,7 @@ export const BackSoonModal: React.FC<BackSoonModalProps> = ({
       return;
     }
 
-    const reasonText = selectedReason === 'other' ? customReason : selectedReason;
-    onSubmit(reasonText, selectedReason === 'other' ? customReason : undefined);
+    onSubmit(selectedReason, selectedReason === 'other' ? customReason : undefined);
     onClose();
     setCustomReason('');
   };
