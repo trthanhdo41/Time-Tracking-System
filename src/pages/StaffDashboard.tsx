@@ -36,7 +36,6 @@ export const StaffDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [showCaptcha, setShowCaptcha] = useState(false);
-  const [onlineTime, setOnlineTime] = useState(0);
   const [showBackSoonModal, setShowBackSoonModal] = useState(false);
   const [showFaceVerification, setShowFaceVerification] = useState(false);
   const [currentTime, setCurrentTime] = useState(getVietnamTimeString());
@@ -118,57 +117,13 @@ export const StaffDashboard: React.FC = () => {
   }, [user, currentSession]); // Refetch when session changes
 
 
-  // Update online time counter and current time
+  // Update current time
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentTime(getVietnamTimeString());
-      
-      if (currentSession && (status === 'online' || status === 'back_soon')) {
-        // Handle both Timestamp and number formats
-        const checkInTime = currentSession.checkInTime;
-        if (!checkInTime) {
-          console.warn('No checkInTime in session');
-          return;
-        }
-        
-        let startTime: number;
-        
-        if (typeof checkInTime === 'object' && 'seconds' in checkInTime) {
-          // Firebase Timestamp format
-          startTime = checkInTime.seconds * 1000;
-        } else if (typeof checkInTime === 'number') {
-          // Number format (milliseconds)
-          startTime = checkInTime;
-        } else {
-          console.warn('Invalid checkInTime format:', checkInTime);
-          return;
-        }
-        
-        const duration = calculateDuration(startTime);
-        
-        // Calculate totalBackSoonTime including current event
-        let totalBackSoonTime = currentSession.totalBackSoonTime || 0;
-        
-        // If currently in back_soon mode, add current back soon duration
-        if (status === 'back_soon') {
-          const backSoonEvents = currentSession.backSoonEvents || [];
-          if (backSoonEvents.length > 0) {
-            const lastEvent = backSoonEvents[backSoonEvents.length - 1];
-            if (!lastEvent.endTime) {
-              // Currently in a back soon event, add current duration
-              const currentBackSoonDuration = Date.now() - lastEvent.startTime;
-              totalBackSoonTime += currentBackSoonDuration;
-            }
-          }
-        }
-        
-        const actualOnlineTime = Math.max(0, duration - totalBackSoonTime);
-        
-        setOnlineTime(actualOnlineTime);
-      }
     }, 1000);
     return () => clearInterval(interval);
-  }, [currentSession, status]);
+  }, []);
 
   // CAPTCHA periodic trigger
   useEffect(() => {
@@ -297,7 +252,9 @@ export const StaffDashboard: React.FC = () => {
                   icon={<ChartIcon className="w-6 h-6" />}
                 />
                 <div className="text-3xl font-bold text-primary-400 font-mono">
-                  {formatDuration(onlineTime)}
+                  {currentSession?.totalOnlineTime 
+                    ? formatDuration(currentSession.totalOnlineTime) 
+                    : '0s'}
                 </div>
                 <p className="text-sm text-gray-400 mt-2">Hôm nay</p>
               </Card>
@@ -308,24 +265,9 @@ export const StaffDashboard: React.FC = () => {
                   icon={<BackSoonIcon className="w-6 h-6" />}
                 />
                 <div className="text-3xl font-bold text-yellow-400 font-mono">
-                  {(() => {
-                    let backSoonTime = currentSession?.totalBackSoonTime || 0;
-                    
-                    // If currently in back_soon mode, add current duration
-                    if (status === 'back_soon' && currentSession?.backSoonEvents) {
-                      const backSoonEvents = currentSession.backSoonEvents;
-                      if (backSoonEvents.length > 0) {
-                        const lastEvent = backSoonEvents[backSoonEvents.length - 1];
-                        if (!lastEvent.endTime) {
-                          // Currently in a back soon event, add current duration
-                          const currentBackSoonDuration = Date.now() - lastEvent.startTime;
-                          backSoonTime += currentBackSoonDuration;
-                        }
-                      }
-                    }
-                    
-                    return formatDuration(backSoonTime);
-                  })()}
+                  {currentSession?.totalBackSoonTime 
+                    ? formatDuration(currentSession.totalBackSoonTime) 
+                    : '0s'}
                 </div>
                 <p className="text-sm text-gray-400 mt-2">Tổng hôm nay</p>
               </Card>

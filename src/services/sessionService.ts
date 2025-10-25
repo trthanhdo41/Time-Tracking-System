@@ -151,10 +151,14 @@ export const updateSessionBackOnline = async (
         lastEvent.duration = now - lastEvent.startTime;
       }
     }
+    
+    // Calculate total back soon time
+    const totalBackSoonTime = backSoonEvents.reduce((sum, event) => sum + (event.duration || 0), 0);
 
     await updateDoc(sessionRef, {
       status: 'online',
       backSoonEvents,
+      totalBackSoonTime,
       updatedAt: now,
     });
 
@@ -195,8 +199,18 @@ export const checkOutSession = async (
       throw new Error('Session not found');
     }
     
-    const sessionData = sessionDoc.docs[0].data() as Session;
-    const totalOnlineTime = now - sessionData.checkInTime - (sessionData.totalBackSoonTime || 0);
+    const sessionData = sessionDoc.docs[0].data() as any;
+    
+    // Handle checkInTime conversion (Timestamp or number)
+    let checkInTime: number;
+    if (sessionData.checkInTime && typeof sessionData.checkInTime === 'object' && 'seconds' in sessionData.checkInTime) {
+      // Firebase Timestamp
+      checkInTime = sessionData.checkInTime.seconds * 1000;
+    } else if (typeof sessionData.checkInTime === 'number') {
+      checkInTime = sessionData.checkInTime;
+    } else {
+      throw new Error('Invalid checkInTime format');
+    }
     
     // Close any open back soon event
     const backSoonEvents = sessionData.backSoonEvents || [];
@@ -210,6 +224,9 @@ export const checkOutSession = async (
     
     // Calculate total back soon time
     const totalBackSoonTime = backSoonEvents.reduce((sum, event) => sum + (event.duration || 0), 0);
+    
+    // Calculate total online time
+    const totalOnlineTime = Math.floor((now - checkInTime - totalBackSoonTime) / 1000); // in seconds
 
     await updateDoc(sessionRef, {
       status: 'offline',
