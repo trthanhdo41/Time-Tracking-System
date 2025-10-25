@@ -142,23 +142,34 @@ export const StaffDashboard: React.FC = () => {
         const now = Date.now();
         const totalElapsed = Math.floor((now - checkInTime) / 1000);
         
-        // Calculate total back soon time
-        // Only add current duration if currently in back_soon status
-        let totalBackSoon = currentSession.totalBackSoonTime || 0;
-        if (status === 'back_soon' && currentSession.backSoonEvents) {
-          const lastEvent = currentSession.backSoonEvents[currentSession.backSoonEvents.length - 1];
-          if (lastEvent && !lastEvent.endTime) {
-            // Currently in back soon, add current duration
-            totalBackSoon += Math.floor((now - lastEvent.startTime) / 1000);
-          }
-        }
-        // If status is 'online', totalBackSoon already has the final value from session
+        // Calculate back soon time differently based on status
+        let backSoonTime = 0;
+        let onlineTime = totalElapsed;
         
-        // Online time = total elapsed - back soon time
-        const onlineTime = Math.max(0, totalElapsed - totalBackSoon);
+        if (status === 'back_soon') {
+          // Currently in back soon state
+          if (currentSession.backSoonEvents) {
+            // Sum all completed back soon events
+            const completedEvents = currentSession.backSoonEvents.filter(e => e.endTime);
+            completedEvents.forEach(event => {
+              backSoonTime += Math.floor(((event.endTime || 0) - event.startTime) / 1000);
+            });
+            
+            // Add current back soon duration
+            const lastEvent = currentSession.backSoonEvents[currentSession.backSoonEvents.length - 1];
+            if (lastEvent && !lastEvent.endTime) {
+              backSoonTime += Math.floor((now - lastEvent.startTime) / 1000);
+            }
+          }
+          onlineTime = Math.max(0, totalElapsed - backSoonTime);
+        } else {
+          // Online state - use stored value from session
+          backSoonTime = currentSession.totalBackSoonTime || 0;
+          onlineTime = Math.max(0, totalElapsed - backSoonTime);
+        }
         
         setCurrentOnlineTime(onlineTime);
-        setCurrentBackSoonTime(totalBackSoon);
+        setCurrentBackSoonTime(backSoonTime);
       } else {
         setCurrentOnlineTime(0);
         setCurrentBackSoonTime(0);
