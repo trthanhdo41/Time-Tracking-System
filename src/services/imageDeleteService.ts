@@ -138,10 +138,8 @@ export const approveImageDeleteRequest = async (
       { requestId, action: 'approved' }
     );
 
-    toast.success('Đã phê duyệt yêu cầu xóa ảnh');
   } catch (error) {
     console.error('Error approving image delete request:', error);
-    toast.error('Không thể phê duyệt yêu cầu xóa ảnh');
     throw new Error('Không thể phê duyệt yêu cầu xóa ảnh');
   }
 };
@@ -177,10 +175,8 @@ export const rejectImageDeleteRequest = async (
       { requestId, action: 'rejected', reason }
     );
 
-    toast.success('Đã từ chối yêu cầu xóa ảnh');
   } catch (error) {
     console.error('Error rejecting image delete request:', error);
-    toast.error('Không thể từ chối yêu cầu xóa ảnh');
     throw new Error('Không thể từ chối yêu cầu xóa ảnh');
   }
 };
