@@ -174,28 +174,68 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
             <div className="text-center py-6 text-gray-400">Chưa có lịch sử làm việc</div>
           ) : (
             <div className="space-y-2 max-h-64 overflow-y-auto">
-              {sessions.map((session) => (
-                <div key={session.id} className="bg-dark-800 rounded-lg p-3">
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <p className="text-gray-400">Check In</p>
-                      <p className="text-white">{formatTime(session.checkInTime)}</p>
+              {sessions.map((session) => {
+                // Get Back Soon reasons
+                const backSoonReasons = session.backSoonEvents?.map((event: any) => {
+                  if (event.reason === 'meeting') return 'Meeting';
+                  if (event.reason === 'wc') return 'WC';
+                  if (event.reason === 'other') return event.customReason || 'Other';
+                  return 'Unknown';
+                }).join(', ') || '';
+
+                // Calculate real-time values if session is still active (no checkout yet)
+                let displayOnlineTime = session.totalOnlineTime || 0;
+                let displayBackSoonTime = session.totalBackSoonTime || 0;
+
+                if (!session.checkOutTime && session.checkInTime) {
+                  // Active session - calculate current values
+                  const now = Date.now();
+                  const checkInTime = typeof session.checkInTime === 'number' ? session.checkInTime : Date.now();
+                  const totalElapsed = Math.floor((now - checkInTime) / 1000);
+                  
+                  // Calculate back soon time from events
+                  if (session.backSoonEvents && session.backSoonEvents.length > 0) {
+                    displayBackSoonTime = session.backSoonEvents.reduce((sum: number, event: any) => {
+                      if (event.endTime) {
+                        return sum + Math.floor((event.endTime - event.startTime) / 1000);
+                      } else {
+                        return sum + Math.floor((now - event.startTime) / 1000);
+                      }
+                    }, 0);
+                  }
+                  
+                  displayOnlineTime = Math.max(0, totalElapsed - displayBackSoonTime);
+                }
+
+                return (
+                  <div key={session.id} className="bg-dark-800 rounded-lg p-3">
+                    <div className="grid grid-cols-2 gap-3 text-sm mb-2">
+                      <div>
+                        <p className="text-gray-400">Check In</p>
+                        <p className="text-white">{formatTime(session.checkInTime)}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-400">Check Out</p>
+                        <p className="text-white">{formatTime(session.checkOutTime)}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-400">Thời Gian Online</p>
+                        <p className="text-green-400">{formatDuration(displayOnlineTime)}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-400">Back Soon</p>
+                        <p className="text-yellow-400">{formatDuration(displayBackSoonTime)}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-gray-400">Check Out</p>
-                      <p className="text-white">{formatTime(session.checkOutTime)}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-400">Thời Gian Online</p>
-                      <p className="text-green-400">{formatDuration(session.totalOnlineTime)}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-400">Back Soon</p>
-                      <p className="text-yellow-400">{formatDuration(session.totalBackSoonTime)}</p>
-                    </div>
+                    {backSoonReasons && (
+                      <div className="mt-2 pt-2 border-t border-dark-700">
+                        <p className="text-xs text-gray-400">Lý do Back Soon:</p>
+                        <p className="text-xs text-yellow-400">{backSoonReasons}</p>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
