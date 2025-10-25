@@ -20,6 +20,8 @@ import {
   HistoryIcon,
   NotificationIcon,
   BackSoonIcon,
+  EditIcon,
+  EyeIcon,
 } from '@/components/icons';
 import { useAuthStore } from '@/store/authStore';
 import { 
@@ -37,12 +39,14 @@ import { BackSoonManager } from '@/components/admin/BackSoonManager';
 import { AllImagesManager } from '@/components/admin/AllImagesManager';
 import { DataCleanupManager } from '@/components/admin/DataCleanupManager';
 import { ErrorReportsManager } from '@/components/admin/ErrorReportsManager';
+import { EmployeeDetailModal } from '@/components/admin/EmployeeDetailModal';
 import toast from 'react-hot-toast';
 
 export const AdminDashboard: React.FC = () => {
   const { user: currentUser } = useAuthStore();
   const navigate = useNavigate();
   const [showAddUser, setShowAddUser] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [users, setUsers] = useState<User[]>([]);
   const [stats, setStats] = useState({
@@ -404,14 +408,25 @@ export const AdminDashboard: React.FC = () => {
                           <StatusBadge status={user.status || 'offline'} />
                         </td>
                         <td className="py-3 px-4">
-                          <Button
-                            variant="danger"
-                            size="sm"
-                            icon={<TrashIcon />}
-                            onClick={() => handleDeleteUser(user.id)}
-                          >
-                            Xóa
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              icon={<EyeIcon />}
+                              onClick={() => setSelectedUser(user)}
+                              title="Chi tiết"
+                            >
+                              Chi tiết
+                            </Button>
+                            <Button
+                              variant="danger"
+                              size="sm"
+                              icon={<TrashIcon />}
+                              onClick={() => handleDeleteUser(user.id)}
+                            >
+                              Xóa
+                            </Button>
+                          </div>
                         </td>
                       </motion.tr>
                     ))
@@ -479,9 +494,9 @@ export const AdminDashboard: React.FC = () => {
         size="lg"
       >
         <div className="p-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Left Column - Form Fields */}
-            <div className="lg:col-span-1 space-y-4">
+            <div className="space-y-4">
               <div>
                 <label className="block text-sm text-gray-400 mb-2">Họ và tên</label>
                 <Input
@@ -547,7 +562,7 @@ export const AdminDashboard: React.FC = () => {
             </div>
 
             {/* Right Column - Face Image Upload */}
-            <div className="lg:col-span-2">
+            <div>
               <label className="block text-sm text-gray-400 mb-2">Ảnh Face0 (Bắt buộc)</label>
               <input
                 type="file"
@@ -564,7 +579,7 @@ export const AdminDashboard: React.FC = () => {
               {faceImagePreview ? (
                 <div className="mt-4">
                   <p className="text-xs text-gray-400 mb-2">✓ Đã tải ảnh Face0</p>
-                  <div className="relative w-full h-96 bg-gray-900 rounded-lg overflow-hidden border-2 border-primary-500/50">
+                  <div className="relative w-full h-64 bg-gray-900 rounded-lg overflow-hidden border-2 border-primary-500/50">
                     <img
                       src={faceImagePreview}
                       alt="Face0 Preview"
@@ -581,7 +596,7 @@ export const AdminDashboard: React.FC = () => {
               ) : (
                 <div className="mt-4">
                   <p className="text-xs text-gray-500 mb-2">Chưa chọn ảnh</p>
-                  <div className="relative w-full h-96 bg-gray-900 rounded-lg overflow-hidden border-2 border-dashed border-gray-600 flex items-center justify-center">
+                  <div className="relative w-full h-64 bg-gray-900 rounded-lg overflow-hidden border-2 border-dashed border-gray-600 flex items-center justify-center">
                     <div className="text-center">
                       <div className="text-gray-600 text-4xl mb-2">📷</div>
                       <p className="text-gray-500">Chọn ảnh để xem preview</p>
@@ -624,6 +639,13 @@ export const AdminDashboard: React.FC = () => {
           </div>
         </div>
       </Modal>
+
+      {/* Employee Detail Modal */}
+      <EmployeeDetailModal
+        user={selectedUser}
+        onClose={() => setSelectedUser(null)}
+        onUpdate={loadData}
+      />
     </div>
   );
 };
