@@ -493,10 +493,10 @@ export const AdminDashboard: React.FC = () => {
         title="Thêm Nhân Viên Mới"
         size="lg"
       >
-        <div className="p-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="p-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* Left Column - Form Fields */}
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div>
                 <label className="block text-sm text-gray-400 mb-2">Họ và tên</label>
                 <Input
@@ -579,7 +579,7 @@ export const AdminDashboard: React.FC = () => {
               {faceImagePreview ? (
                 <div className="mt-4">
                   <p className="text-xs text-gray-400 mb-2">✓ Đã tải ảnh Face0</p>
-                  <div className="relative w-full h-64 bg-gray-900 rounded-lg overflow-hidden border-2 border-primary-500/50">
+                  <div className="relative w-full h-48 bg-gray-900 rounded-lg overflow-hidden border-2 border-primary-500/50">
                     <img
                       src={faceImagePreview}
                       alt="Face0 Preview"
@@ -596,10 +596,10 @@ export const AdminDashboard: React.FC = () => {
               ) : (
                 <div className="mt-4">
                   <p className="text-xs text-gray-500 mb-2">Chưa chọn ảnh</p>
-                  <div className="relative w-full h-64 bg-gray-900 rounded-lg overflow-hidden border-2 border-dashed border-gray-600 flex items-center justify-center">
+                  <div className="relative w-full h-48 bg-gray-900 rounded-lg overflow-hidden border-2 border-dashed border-gray-600 flex items-center justify-center">
                     <div className="text-center">
-                      <div className="text-gray-600 text-4xl mb-2">📷</div>
-                      <p className="text-gray-500">Chọn ảnh để xem preview</p>
+                      <CameraIcon className="w-16 h-16 text-gray-600 mx-auto mb-3" />
+                      <p className="text-gray-500 text-sm">Chọn ảnh để xem preview</p>
                     </div>
                   </div>
                 </div>
@@ -608,8 +608,8 @@ export const AdminDashboard: React.FC = () => {
           </div>
         </div>
         
-        <div className="mt-6">
-          <div className="flex gap-3 pt-4">
+        <div className="mt-4">
+          <div className="flex gap-3 pt-2">
             <Button 
               variant="secondary" 
               onClick={() => {
