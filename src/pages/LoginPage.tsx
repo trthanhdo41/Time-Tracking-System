@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { LockIcon } from '@/components/icons';
-import { RainEffect } from '@/components/effects/RainEffect';
 import { signIn } from '@/services/auth';
 import { useAuthStore } from '@/store/authStore';
 import toast from 'react-hot-toast';
@@ -30,10 +29,7 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
-      {/* 10D Rain Effect với background */}
-      <RainEffect />
-
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
