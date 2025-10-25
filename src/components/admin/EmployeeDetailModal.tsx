@@ -90,15 +90,8 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
   return (
     <Modal isOpen={!!user} onClose={onClose} size="lg">
       <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
+        <div className="mb-6">
           <h2 className="text-2xl font-bold">Chi Tiết Nhân Viên</h2>
-          <Button
-            variant="secondary"
-            onClick={onClose}
-            size="sm"
-          >
-            <XIcon className="w-5 h-5" />
-          </Button>
         </div>
 
         {/* Employee Info */}

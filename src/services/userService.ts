@@ -212,12 +212,14 @@ export const getUserSessions = async (userId: string): Promise<Session[]> => {
     const sessionsRef = collection(db, 'sessions');
     const q = query(
       sessionsRef,
-      where('userId', '==', userId),
-      orderBy('checkInTime', 'desc')
+      where('userId', '==', userId)
+      // Remove orderBy to avoid composite index requirement
+      // Will sort on client-side instead
     );
     const snapshot = await getDocs(q);
     
-    return snapshot.docs.map(doc => {
+    // Convert and sort on client-side
+    const sessions = snapshot.docs.map(doc => {
       const data = doc.data();
       return {
         ...data,
@@ -228,6 +230,11 @@ export const getUserSessions = async (userId: string): Promise<Session[]> => {
         lastCaptchaTime: data.lastCaptchaTime instanceof Timestamp ? data.lastCaptchaTime?.toMillis() : data.lastCaptchaTime,
       } as Session;
     });
+    
+    // Sort by checkInTime descending
+    sessions.sort((a, b) => b.checkInTime - a.checkInTime);
+    
+    return sessions;
   } catch (error) {
     console.error('Error getting user sessions:', error);
     throw new Error('Không thể tải lịch sử làm việc');
