@@ -19,6 +19,7 @@ export const Navbar: React.FC = () => {
   const { status, currentSession } = useSessionStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [time, setTime] = useState(new Date());
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // Update time every second
   React.useEffect(() => {
@@ -27,11 +28,13 @@ export const Navbar: React.FC = () => {
   }, []);
 
   const handleLogout = async () => {
+    setIsLoggingOut(true);
     try {
       await signOut();
       toast.success('Đăng xuất thành công');
     } catch (error) {
       toast.error('Lỗi khi đăng xuất');
+      setIsLoggingOut(false);
     }
   };
 
@@ -108,9 +111,10 @@ export const Navbar: React.FC = () => {
               size="sm"
               icon={<LogoutIcon />}
               onClick={handleLogout}
+              disabled={isLoggingOut}
               className="hidden md:flex"
             >
-              Đăng xuất
+              {isLoggingOut ? 'Đang xuất...' : 'Đăng xuất'}
             </Button>
 
             {/* Mobile Menu Button */}
@@ -144,9 +148,10 @@ export const Navbar: React.FC = () => {
               size="sm"
               icon={<LogoutIcon />}
               onClick={handleLogout}
+              disabled={isLoggingOut}
               className="w-full"
             >
-              Đăng xuất
+              {isLoggingOut ? 'Đang xuất...' : 'Đăng xuất'}
             </Button>
           </motion.div>
         )}

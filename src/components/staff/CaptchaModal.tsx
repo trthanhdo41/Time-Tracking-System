@@ -62,6 +62,9 @@ export const CaptchaModal: React.FC<CaptchaModalProps> = ({
       }, 1000);
     }
 
+    // Backend timeout check is handled via session timeout
+    // No need for client-side detection as it's unreliable
+
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
@@ -102,7 +105,7 @@ export const CaptchaModal: React.FC<CaptchaModalProps> = ({
     if (userInput.toLowerCase() === captchaCode.toLowerCase()) {
       // Success
       await updateCaptchaAttempt(currentSession.id, true, user);
-      toast.success('Xác thực thành công!');
+      // Toast notification is handled in parent component
       soundManager.playSuccess();
       setLoading(false);
       onSuccess();

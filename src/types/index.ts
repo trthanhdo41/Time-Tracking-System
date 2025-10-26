@@ -12,6 +12,7 @@ export type ActionType =
   | 'face_verify'
   | 'face_verification_failed'
   | 'delete_image_request'
+  | 'error_report'
   | 'account_created'
   | 'account_updated'
   | 'account_deleted'

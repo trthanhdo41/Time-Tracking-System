@@ -15,6 +15,7 @@ import { useAuthStore } from '@/store/authStore';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { createImageDeleteRequest } from '@/services/imageDeleteService';
+import { formatDate, formatTime } from '@/utils/time';
 import toast from 'react-hot-toast';
 
 interface CapturedImage {
@@ -304,7 +305,7 @@ export const CameraPage: React.FC = () => {
                     <div className="flex-1 min-w-0">
                       <p className="font-medium truncate">{image.type}</p>
                       <p className="text-sm text-gray-400">
-                        {new Date(image.timestamp).toLocaleString('vi-VN')}
+                        {formatDate(image.timestamp)} {formatTime(image.timestamp)}
                       </p>
                     </div>
 

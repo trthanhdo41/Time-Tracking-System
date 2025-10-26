@@ -7,6 +7,7 @@ import { TrashIcon, EyeIcon, DownloadIcon } from '@/components/icons';
 import { ImageDeleteRequestModal } from './ImageDeleteRequestModal';
 import { getUserImageDeleteRequests } from '@/services/imageDeleteService';
 import { ImageDeleteRequest } from '@/types';
+import { formatDate, formatTime } from '@/utils/time';
 import toast from 'react-hot-toast';
 
 interface ImageItem {
@@ -206,7 +207,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({ userId }) => {
                           {getImageTypeLabel(image.type)}
                         </span>
                         <span className="text-xs text-gray-400">
-                          {new Date(image.timestamp).toLocaleDateString('vi-VN')}
+                          {formatDate(image.timestamp)}
                         </span>
                       </div>
                       
@@ -281,7 +282,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({ userId }) => {
               <div>
                 <span className="text-gray-400">Thời gian:</span>
                 <span className="text-white ml-2">
-                  {new Date(selectedImage.timestamp).toLocaleString('vi-VN')}
+                  {formatDate(selectedImage.timestamp)} {formatTime(selectedImage.timestamp)}
                 </span>
               </div>
             </div>

@@ -33,12 +33,28 @@ export const FaceVerificationModal: React.FC<FaceVerificationModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
+      // Reset state when modal opens
+      setStep('camera');
+      setError('');
+      setLoading(false);
       startCamera();
     } else {
       stopCamera();
     }
+
+    // Handle page unload to trigger failure if modal is open
+    const handleBeforeUnload = () => {
+      if (isOpen) {
+        onFailure();
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
     
-    return () => stopCamera();
+    return () => {
+      stopCamera();
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
   }, [isOpen]);
 
   const startCamera = async () => {
@@ -203,11 +219,10 @@ export const FaceVerificationModal: React.FC<FaceVerificationModalProps> = ({
 
       setStep('success');
       soundManager.playSuccess();
-      toast.success('Xác thực khuôn mặt thành công!');
+      // Toast notification is handled in parent component
       
       setTimeout(() => {
-        onSuccess();
-        onClose();
+        onSuccess(); // onSuccess will close the modal and show toast
       }, 1500);
 
     } catch (error: any) {
@@ -216,6 +231,61 @@ export const FaceVerificationModal: React.FC<FaceVerificationModalProps> = ({
       setStep('error');
       soundManager.playError();
       toast.error(error.message);
+      
+      // Create error report for admin
+      try {
+        const imageBlob = await captureImageFromVideo(videoRef.current!);
+        const timestamp = Date.now();
+        let failedImageUrl = '';
+        
+        // Upload failed image
+        if (isImageUploadConfigured()) {
+          try {
+            failedImageUrl = await uploadImageToImgbb(
+              imageBlob, 
+              `${user.username}_face2_failed_${timestamp}`
+            );
+          } catch (uploadError) {
+            console.error('Failed image upload error:', uploadError);
+          }
+        }
+        
+        // Create error report in Firestore
+        const { addDoc, collection, serverTimestamp } = await import('firebase/firestore');
+        const { db } = await import('@/config/firebase');
+        
+        await addDoc(collection(db, 'errorReports'), {
+          userId: user.id,
+          username: user.username,
+          department: user.department,
+          position: user.position,
+          type: 'face_verification_failed',
+          failedImageUrl: failedImageUrl,
+          attempts: 1,
+          timestamp: serverTimestamp(),
+          status: 'pending',
+          description: `Face2 verification failed: ${error.message}`,
+          face0Url: user.faceImageUrl,
+          face1Url: user.face1Url
+        });
+        
+        // Log activity
+        const { logActivity } = await import('@/services/activityLog');
+        await logActivity(
+          user.id,
+          user.username,
+          user.role,
+          user.department,
+          user.position,
+          'error_report',
+          `Face verification failed - Error report created`,
+          user.id,
+          user.role,
+          user.department
+        );
+      } catch (reportError) {
+        console.error('Error creating error report:', reportError);
+      }
       
       setTimeout(() => {
         onFailure();
@@ -293,12 +363,12 @@ export const FaceVerificationModal: React.FC<FaceVerificationModalProps> = ({
 
         <div className="flex gap-3">
           <Button
-            variant="outline"
-            onClick={onClose}
+            variant="danger"
+            onClick={onFailure}
             className="flex-1"
             disabled={loading}
           >
-            Hủy
+            Không xác thực (Check Out)
           </Button>
           <Button
             onClick={handleVerify}

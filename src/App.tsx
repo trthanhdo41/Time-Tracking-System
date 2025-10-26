@@ -18,6 +18,7 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { DeviceBlockModal } from '@/components/DeviceBlockModal';
 import { getDeviceType, isDesktopDevice } from '@/utils/deviceDetection';
 import { startCleanupService } from '@/utils/cleanupOfflineUsers';
+import { startSessionCleanupService } from '@/utils/cleanupStaleSessions';
 // import { loadFaceDetectionModels } from '@/utils/faceRecognition';
 
 function App() {
@@ -27,6 +28,9 @@ function App() {
   useEffect(() => {
     // Start cleanup service for offline users (disabled due to permissions)
     // startCleanupService();
+    
+    // Start session cleanup service (auto checkout stale sessions)
+    startSessionCleanupService();
     
     // Check device type on mount
     const currentDeviceType = getDeviceType();
