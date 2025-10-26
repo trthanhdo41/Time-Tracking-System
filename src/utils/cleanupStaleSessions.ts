@@ -54,6 +54,12 @@ export const cleanupStaleSessions = async () => {
     }
     
   } catch (error) {
+    // Silently ignore permission errors - this is expected for client-side cleanup
+    // The actual cleanup should be done server-side (Cloud Functions) for proper permissions
+    if (error instanceof Error && error.message.includes('permission')) {
+      // Expected error - client doesn't have permission to update other users' sessions
+      return;
+    }
     console.error('Error cleaning up stale sessions:', error);
   }
 };
