@@ -1,6 +1,17 @@
-export const formatTime = (timestamp: number): string => {
-  if (!timestamp || isNaN(timestamp)) return 'Invalid Time';
-  const date = new Date(timestamp);
+export const formatTime = (timestamp: number | any): string => {
+  if (!timestamp) return 'Invalid Time';
+  
+  // Handle Firebase Timestamp
+  let ts = timestamp;
+  if (timestamp && typeof timestamp === 'object' && timestamp.toMillis) {
+    ts = timestamp.toMillis();
+  } else if (timestamp && typeof timestamp === 'object' && timestamp.seconds) {
+    ts = timestamp.seconds * 1000;
+  }
+  
+  if (!ts || isNaN(ts)) return 'Invalid Time';
+  
+  const date = new Date(ts);
   if (isNaN(date.getTime())) return 'Invalid Time';
   return date.toLocaleTimeString('vi-VN', {
     hour: '2-digit',
@@ -9,9 +20,20 @@ export const formatTime = (timestamp: number): string => {
   });
 };
 
-export const formatDate = (timestamp: number): string => {
-  if (!timestamp || isNaN(timestamp)) return 'Invalid Date';
-  const date = new Date(timestamp);
+export const formatDate = (timestamp: number | any): string => {
+  if (!timestamp) return 'Invalid Date';
+  
+  // Handle Firebase Timestamp
+  let ts = timestamp;
+  if (timestamp && typeof timestamp === 'object' && timestamp.toMillis) {
+    ts = timestamp.toMillis();
+  } else if (timestamp && typeof timestamp === 'object' && timestamp.seconds) {
+    ts = timestamp.seconds * 1000;
+  }
+  
+  if (!ts || isNaN(ts)) return 'Invalid Date';
+  
+  const date = new Date(ts);
   if (isNaN(date.getTime())) return 'Invalid Date';
   return date.toLocaleDateString('vi-VN', {
     day: '2-digit',

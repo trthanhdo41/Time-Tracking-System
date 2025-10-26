@@ -65,13 +65,35 @@ export const StaffDashboard: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
-  // Listen to current session
+  // Listen to current session and check for inactivity
   useEffect(() => {
     if (!user) return;
     
     const unsubscribe = listenToCurrentSession(user.id, (session) => {
       useSessionStore.getState().setSession(session);
       useSessionStore.getState().setStatus(session?.status || 'offline');
+      
+      // Check if session is stale (inactive > 5 minutes)
+      if (session && session.status === 'online') {
+        const lastActivityTime = session.lastActivityTime;
+        if (lastActivityTime) {
+          const now = Date.now();
+          const lastActivity = typeof lastActivityTime === 'number' 
+            ? lastActivityTime 
+            : (lastActivityTime as any).seconds * 1000;
+          
+          const timeSinceLastActivity = now - lastActivity;
+          
+          // If inactive for more than 5 minutes, auto checkout
+          if (timeSinceLastActivity > 5 * 60 * 1000) {
+            console.log('Session inactive, auto checking out...');
+            checkOutSession(session.id, 'Auto cleanup - Inactive 5+ minutes', user);
+            useSessionStore.getState().setSession(null);
+            useSessionStore.getState().setStatus('offline');
+            toast.error('Đã tự động checkout do không hoạt động 5 phút');
+          }
+        }
+      }
     });
     
     return () => unsubscribe();
@@ -124,6 +146,28 @@ export const StaffDashboard: React.FC = () => {
     const interval = setInterval(() => {
       setCurrentTime(getVietnamTimeString());
       
+      // Check for session inactivity and auto checkout
+      if (currentSession && status === 'online' && user) {
+        const lastActivityTime = currentSession.lastActivityTime;
+        if (lastActivityTime) {
+          const now = Date.now();
+          const lastActivity = typeof lastActivityTime === 'number' 
+            ? lastActivityTime 
+            : (lastActivityTime as any).seconds * 1000;
+          
+          const timeSinceLastActivity = now - lastActivity;
+          
+          // If inactive for more than 5 minutes, auto checkout
+          if (timeSinceLastActivity > 5 * 60 * 1000) {
+            console.log('Session inactive, auto checking out...');
+            checkOutSession(currentSession.id, 'Auto cleanup - Inactive 5+ minutes', user);
+            useSessionStore.getState().setSession(null);
+            useSessionStore.getState().setStatus('offline');
+            toast.error('Đã tự động checkout do không hoạt động 5 phút');
+          }
+        }
+      }
+      
       // Calculate online time and back soon time from session
       if (currentSession && status !== 'offline') {
         const sessionCheckInTime = currentSession.checkInTime;
@@ -131,9 +175,9 @@ export const StaffDashboard: React.FC = () => {
         
         // Convert checkInTime to number
         let checkInTime: number;
-        if (typeof sessionCheckInTime === 'object' && 'seconds' in sessionCheckInTime) {
+        if (sessionCheckInTime && typeof sessionCheckInTime === 'object' && 'seconds' in sessionCheckInTime) {
           checkInTime = sessionCheckInTime.seconds * 1000;
-        } else if (typeof sessionCheckInTime === 'number') {
+        } else if (sessionCheckInTime && typeof sessionCheckInTime === 'number') {
           checkInTime = sessionCheckInTime;
         } else {
           return;
@@ -222,6 +266,8 @@ export const StaffDashboard: React.FC = () => {
   const handleFaceVerificationSuccess = () => {
     setShowFaceVerification(false);
     toast.success('Xác thực khuôn mặt thành công!');
+    // Reset face verification count after successful verification
+    // This will be handled in the session update
   };
 
   const handleFaceVerificationFail = () => {

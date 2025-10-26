@@ -56,21 +56,17 @@ export const HistoryPage: React.FC = () => {
   const stats = {
     totalOnlineTime: sessions.reduce((sum, s) => {
       const time = s.totalOnlineTime || 0;
-      // If time is too large (likely a timestamp), skip it
-      if (time > 86400000) return sum; // Skip if > 24 hours
+      // totalOnlineTime is already in seconds
       return sum + time;
     }, 0),
     totalBackSoonTime: sessions.reduce((sum, s) => {
       const time = s.totalBackSoonTime || 0;
-      // If time is too large (likely a timestamp), skip it
-      if (time > 86400000) return sum; // Skip if > 24 hours
+      // totalBackSoonTime is already in seconds
       return sum + time;
     }, 0),
     averagePerDay: sessions.length > 0 
       ? sessions.reduce((sum, s) => {
           const time = s.totalOnlineTime || 0;
-          // If time is too large (likely a timestamp), skip it
-          if (time > 86400000) return sum; // Skip if > 24 hours
           return sum + time;
         }, 0) / sessions.length 
       : 0,
@@ -166,7 +162,7 @@ export const HistoryPage: React.FC = () => {
           <Card gradient>
             <CardHeader title="Tổng Giờ Làm" icon={<ChartIcon />} />
             <div className="text-3xl font-bold text-primary-400">
-              {formatDuration(Math.floor(stats.totalOnlineTime / 1000))}
+              {formatDuration(stats.totalOnlineTime)}
             </div>
             <p className="text-sm text-gray-400 mt-2">{sessions.length} phiên</p>
           </Card>
@@ -174,7 +170,7 @@ export const HistoryPage: React.FC = () => {
           <Card gradient>
             <CardHeader title="Back Soon Time" icon={<BackSoonIcon />} />
             <div className="text-3xl font-bold text-yellow-400">
-              {formatDuration(Math.floor(stats.totalBackSoonTime / 1000))}
+              {formatDuration(stats.totalBackSoonTime)}
             </div>
             <p className="text-sm text-gray-400 mt-2">Tổng cộng</p>
           </Card>
@@ -208,7 +204,17 @@ export const HistoryPage: React.FC = () => {
                     <div>
                       <h3 className="text-lg font-semibold">{formatDate(record.checkInTime)}</h3>
                       <p className="text-sm text-gray-400">
-                        {new Date(record.checkInTime).toLocaleDateString('vi-VN', { weekday: 'long' })}
+                        {(() => {
+                          // Convert Firebase Timestamp to number
+                          let ts: number | any = record.checkInTime;
+                          if (ts && typeof ts === 'object' && ts.toMillis) {
+                            ts = ts.toMillis();
+                          } else if (ts && typeof ts === 'object' && ts.seconds) {
+                            ts = ts.seconds * 1000;
+                          }
+                          if (!ts) return '';
+                          return new Date(ts).toLocaleDateString('vi-VN', { weekday: 'long' });
+                        })()}
                       </p>
                     </div>
                   </div>
@@ -217,21 +223,13 @@ export const HistoryPage: React.FC = () => {
                     <div className="text-center">
                       <p className="text-sm text-gray-400">Online</p>
                       <p className="text-lg font-mono font-bold text-green-400">
-                        {(() => {
-                          const time = record.totalOnlineTime || 0;
-                          if (time > 86400000) return '0s'; // Skip if > 24 hours
-                          return formatDuration(Math.floor(time / 1000));
-                        })()}
+                        {formatDuration(record.totalOnlineTime || 0)}
                       </p>
                     </div>
                     <div className="text-center">
                       <p className="text-sm text-gray-400">Back Soon</p>
                       <p className="text-lg font-mono font-bold text-yellow-400">
-                        {(() => {
-                          const time = record.totalBackSoonTime || 0;
-                          if (time > 86400000) return '0s'; // Skip if > 24 hours
-                          return formatDuration(Math.floor(time / 1000));
-                        })()}
+                        {formatDuration(record.totalBackSoonTime || 0)}
                       </p>
                     </div>
                   </div>
@@ -253,7 +251,7 @@ export const HistoryPage: React.FC = () => {
                     <div key={idx} className="flex items-center gap-3 glass p-3 rounded-lg">
                       <BackSoonIcon className="w-5 h-5 text-yellow-500 flex-shrink-0" />
                       <div className="flex-1">
-                        <p className="text-sm font-medium">Back Soon - {backSoon.reason}</p>
+                        <p className="text-sm font-medium">Back Soon - {backSoon.reason || 'Unknown'}</p>
                         <p className="text-xs text-gray-400">
                           {formatTime(backSoon.startTime)} • {formatDuration(Math.floor((backSoon.duration || 0) / 1000))}
                         </p>

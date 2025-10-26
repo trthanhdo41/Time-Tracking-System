@@ -29,10 +29,12 @@ export const CheckInCamera: React.FC<CheckInCameraProps> = ({ onClose, onSuccess
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const detectionIntervalRef = useRef<number | null>(null);
+  const faceImageRef = useRef<HTMLImageElement | null>(null);
   const MAX_ATTEMPTS = 2;
 
   useEffect(() => {
     startCamera();
+    preloadFaceImage();
     return () => {
       stopCamera();
       if (detectionIntervalRef.current) {
@@ -40,6 +42,23 @@ export const CheckInCamera: React.FC<CheckInCameraProps> = ({ onClose, onSuccess
       }
     };
   }, []);
+
+  const preloadFaceImage = async () => {
+    if (!user?.faceImageUrl) return;
+    
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.src = user.faceImageUrl;
+    
+    await new Promise((resolve, reject) => {
+      img.onload = () => {
+        console.log('Face image preloaded successfully');
+        faceImageRef.current = img;
+        resolve(null);
+      };
+      img.onerror = reject;
+    });
+  };
 
   const startCamera = async () => {
     try {
@@ -100,13 +119,35 @@ export const CheckInCamera: React.FC<CheckInCameraProps> = ({ onClose, onSuccess
 
       // Verify with Face0 if exists
       if (user.faceImageUrl) {
-        const baseFaceImg = new Image();
-        baseFaceImg.crossOrigin = 'anonymous'; // Fix CORS issue
-        baseFaceImg.src = user.faceImageUrl;
-        await new Promise((resolve, reject) => {
-          baseFaceImg.onload = resolve;
-          baseFaceImg.onerror = reject;
-        });
+        // Use preloaded image if available, otherwise load it now
+        let baseFaceImg: HTMLImageElement;
+        
+        if (faceImageRef.current) {
+          console.log('Using preloaded face image');
+          baseFaceImg = faceImageRef.current;
+        } else {
+          console.log('Loading face image on-demand...');
+          baseFaceImg = new Image();
+          baseFaceImg.crossOrigin = 'anonymous'; // Fix CORS issue
+          baseFaceImg.src = user.faceImageUrl;
+          
+          // Add timeout to prevent infinite waiting
+          await Promise.race([
+            new Promise((resolve, reject) => {
+              baseFaceImg.onload = () => {
+                console.log('Face image loaded successfully');
+                resolve(null);
+              };
+              baseFaceImg.onerror = (error) => {
+                console.error('Face image load error:', error);
+                reject(new Error('Failed to load face image'));
+              };
+            }),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Face image load timeout')), 15000)
+            )
+          ]);
+        }
 
         const baseFaceDetection = await detectFace(baseFaceImg);
         if (baseFaceDetection) {
