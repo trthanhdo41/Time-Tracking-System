@@ -6,8 +6,10 @@ import { Button } from '@/components/ui/Button';
 import { 
   LogoutIcon, 
   MenuIcon, 
-  CloseIcon
+  CloseIcon,
+  TimeTrackingIcon
 } from '@/components/icons';
+import { StatusBadge } from '@/components/ui/StatusBadge';
 import { signOut } from '@/services/auth';
 import toast from 'react-hot-toast';
 import { formatTime } from '@/utils/time';
@@ -50,7 +52,7 @@ export const Navbar: React.FC = () => {
               transition={{ duration: 0.6 }}
               className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center"
             >
-              <span className="text-white font-bold text-xl">T</span>
+              <TimeTrackingIcon className="w-6 h-6 text-white" />
             </motion.div>
             <div className="hidden md:block">
               <h1 className="text-xl font-bold gradient-text">
