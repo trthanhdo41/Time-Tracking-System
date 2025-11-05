@@ -17,29 +17,29 @@ export interface ForgotPasswordRequest {
  * Submit forgot password request
  */
 export const submitForgotPasswordRequest = async (
-  email: string
+  username: string
 ): Promise<void> => {
   try {
-    // Verify that email exists
+    // Verify that username exists
     const usersRef = collection(db, 'users');
     const userQuery = query(
       usersRef,
-      where('email', '==', email)
+      where('username', '==', username)
     );
     const userSnapshot = await getDocs(userQuery);
 
     if (userSnapshot.empty) {
-      throw new Error('Email does not match any account. Please check your email address.');
+      throw new Error('Username does not exist. Please check your username.');
     }
     
     const userData = userSnapshot.docs[0].data();
-    const username = userData.username || email.split('@')[0];
+    const email = userData.email || '';
 
     // Check if there's already a pending request for this user
     const forgotPasswordRef = collection(db, 'forgotPasswordRequests');
     const existingRequestQuery = query(
       forgotPasswordRef,
-      where('email', '==', email),
+      where('username', '==', username),
       where('status', '==', 'pending')
     );
     const existingRequestSnapshot = await getDocs(existingRequestQuery);
@@ -50,7 +50,7 @@ export const submitForgotPasswordRequest = async (
 
     // Create forgot password request
     await addDoc(forgotPasswordRef, {
-      username, // Auto-generated from email
+      username,
       email,
       status: 'pending',
       requestedAt: serverTimestamp(),

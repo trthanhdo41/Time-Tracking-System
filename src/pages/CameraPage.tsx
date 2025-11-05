@@ -235,7 +235,7 @@ export const CameraPage: React.FC = () => {
                 autoPlay
                 playsInline
                 muted
-                className={`w-full h-full object-cover ${!isCameraActive ? 'hidden' : ''}`}
+                className={`w-full h-full object-contain ${!isCameraActive ? 'hidden' : ''}`}
                 style={{ transform: 'scaleX(-1)' }}
               />
               

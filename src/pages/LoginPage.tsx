@@ -374,14 +374,14 @@ interface ForgotPasswordModalProps {
 }
 
 const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen, onClose }) => {
-  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotUsername, setForgotUsername] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!forgotEmail) {
-      toast.error('Please enter your email address');
+    if (!forgotUsername) {
+      toast.error('Please enter your username');
       return;
     }
 
@@ -389,10 +389,10 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen, onClo
     try {
       // Import forgot password service
       const { submitForgotPasswordRequest } = await import('@/services/forgotPasswordService');
-      await submitForgotPasswordRequest(forgotEmail);
+      await submitForgotPasswordRequest(forgotUsername);
       
       toast.success('Password reset request submitted. Admin will process it shortly.');
-      setForgotEmail('');
+      setForgotUsername('');
       onClose();
     } catch (error: any) {
       toast.error(error.message || 'Unable to submit password reset request');
@@ -410,16 +410,16 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen, onClo
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         <p className="text-sm text-gray-400 mb-4">
-          Please enter your Email. Your request will be sent to Admin for password reset.
+          Please enter your Username. Your request will be sent to Admin for password reset.
         </p>
 
 
         <Input
-          label="Email"
-          type="email"
-          value={forgotEmail}
-          onChange={(e) => setForgotEmail(e.target.value)}
-          placeholder="Enter your email"
+          label="Username"
+          type="text"
+          value={forgotUsername}
+          onChange={(e) => setForgotUsername(e.target.value)}
+          placeholder="Enter your username"
           required
         />
 

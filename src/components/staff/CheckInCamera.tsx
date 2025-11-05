@@ -143,10 +143,12 @@ export const CheckInCamera: React.FC<CheckInCameraProps> = ({ onClose, onSuccess
               const scaleX = displayWidth / videoWidth;
               const scaleY = displayHeight / videoHeight;
               
-              const scaledX = box.x * scaleX;
-              const scaledY = box.y * scaleY;
-              const scaledWidth = box.width * scaleX;
-              const scaledHeight = box.height * scaleY;
+              // Scale detection box 1.2x to make it more visible
+              const boxScale = 1.2;
+              const scaledX = box.x * scaleX - (box.width * scaleX * (boxScale - 1)) / 2;
+              const scaledY = box.y * scaleY - (box.height * scaleY * (boxScale - 1)) / 2;
+              const scaledWidth = box.width * scaleX * boxScale;
+              const scaledHeight = box.height * scaleY * boxScale;
               
               // Flip horizontally (video is mirrored)
               const flippedX = displayWidth - scaledX - scaledWidth;
@@ -498,7 +500,7 @@ export const CheckInCamera: React.FC<CheckInCameraProps> = ({ onClose, onSuccess
             autoPlay
             playsInline
             muted
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain"
             style={{ transform: 'scaleX(-1)' }}
           />
 

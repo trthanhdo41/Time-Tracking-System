@@ -215,6 +215,12 @@ export const checkOutSession = async (
     
     const sessionData = sessionDoc.docs[0].data() as any;
     
+    // IMPORTANT: Check if already checked out to prevent duplicate checkouts
+    if (sessionData.status === 'offline') {
+      console.log(`Session ${sessionId} is already checked out. Skipping duplicate checkout.`);
+      return;
+    }
+    
     // Handle checkInTime conversion (Timestamp or number)
     let checkInTime: number;
     if (sessionData.checkInTime && typeof sessionData.checkInTime === 'object' && 'seconds' in sessionData.checkInTime) {

@@ -26,6 +26,13 @@ export const createImageDeleteRequest = async (
   user: any
 ): Promise<string> => {
   try {
+    // Validate inputs
+    if (!userId || !imageUrl || !reason || !user) {
+      throw new Error('Missing required information');
+    }
+
+    console.log('Creating image delete request:', { userId, imageUrl, reason });
+
     const requestData: Omit<ImageDeleteRequest, 'id'> = {
       userId,
       imageUrl,
@@ -35,6 +42,7 @@ export const createImageDeleteRequest = async (
     };
 
     const docRef = await addDoc(collection(db, 'imageDeleteRequests'), requestData);
+    console.log('Image delete request created:', docRef.id);
 
     // Log activity
     await logActivity(
@@ -53,10 +61,11 @@ export const createImageDeleteRequest = async (
 
     toast.success('Image deletion request sent. Please wait for approval.');
     return docRef.id;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating image delete request:', error);
-    toast.error('Unable to send image deletion request');
-    throw new Error('Unable to create image deletion request');
+    const errorMessage = error.message || 'Unable to send image deletion request';
+    toast.error(errorMessage);
+    throw new Error(errorMessage);
   }
 };
 

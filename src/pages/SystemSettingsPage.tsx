@@ -245,7 +245,7 @@ export const SystemSettingsPage: React.FC = () => {
                   className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
                 <p className="text-xs text-gray-400 mt-1">
-                  Face similarity threshold (0-1). Low = easier to pass, High = harder to pass (recommended: 0.7)
+                  Minimum similarity score required to pass (0-1). Lower value = easier to pass (less strict), Higher value = harder to pass (more strict). Recommended: 0.7
                 </p>
               </div>
 

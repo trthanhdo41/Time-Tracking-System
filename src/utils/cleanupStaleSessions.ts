@@ -4,7 +4,7 @@ import { Session } from '@/types';
 import { logActivity } from '@/services/activityLog';
 
 // Clean up sessions that have been inactive for more than X minutes
-const SESSION_INACTIVITY_THRESHOLD = 5 * 60 * 1000; // 5 minutes in milliseconds
+const SESSION_INACTIVITY_THRESHOLD = 2 * 60 * 1000; // 2 minutes in milliseconds
 
 export const cleanupStaleSessions = async () => {
   try {
@@ -66,6 +66,12 @@ export const cleanupStaleSessions = async () => {
 
 const autoCheckoutSession = async (sessionId: string, sessionData: any, timeSinceLastActivity: number): Promise<void> => {
   try {
+    // IMPORTANT: Check if already checked out to prevent duplicate checkouts
+    if (sessionData.status === 'offline') {
+      console.log(`Session ${sessionId} is already checked out. Skipping duplicate cleanup.`);
+      return;
+    }
+    
     const now = Date.now();
     
     // Handle checkInTime conversion
@@ -137,13 +143,13 @@ const autoCheckoutSession = async (sessionId: string, sessionData: any, timeSinc
   }
 };
 
-// Run cleanup every 2 minutes for faster response
+// Run cleanup every 30 seconds for faster response
 export const startSessionCleanupService = () => {
-  console.log('Starting session cleanup service...');
+  console.log('Starting session cleanup service (every 30s)...');
   
   // Run immediately
   cleanupStaleSessions();
   
-  // Then run every 2 minutes for faster detection
-  setInterval(cleanupStaleSessions, 2 * 60 * 1000);
+  // Then run every 30 seconds for faster detection
+  setInterval(cleanupStaleSessions, 30 * 1000);
 };

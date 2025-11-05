@@ -347,7 +347,7 @@ export const FaceVerificationModal: React.FC<FaceVerificationModalProps> = ({
             autoPlay
             playsInline
             muted
-            className="w-full h-64 object-cover"
+            className="w-full h-64 object-contain"
           />
           
           <AnimatePresence>

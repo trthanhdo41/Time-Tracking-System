@@ -32,6 +32,11 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({ selectedUserId, showNa
   const [searchQuery, setSearchQuery] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [minOnlineTime, setMinOnlineTime] = useState('');
+  const [maxOnlineTime, setMaxOnlineTime] = useState('');
+  const [minBackSoonTime, setMinBackSoonTime] = useState('');
+  const [maxBackSoonTime, setMaxBackSoonTime] = useState('');
+  const [userFilter, setUserFilter] = useState(''); // Filter by username/email
   const [showFilters, setShowFilters] = useState(false);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
@@ -151,29 +156,52 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({ selectedUserId, showNa
       : 0,
   };
 
-  // Filter sessions by search query
+  // Filter sessions by search query and time filters
   const filteredSessions = sessions.filter(session => {
-    if (!searchQuery) return true;
-    
-    const date = formatDate(session.checkInTime);
-    const reason = session.checkOutReason || '';
-    const backSoonReasons = (session.backSoonEvents || []).map(e => e.reason).join(' ');
-    const searchLower = searchQuery.toLowerCase();
-    
-    // Basic search fields (always available)
-    let matches = date.toLowerCase().includes(searchLower) ||
-                  reason.toLowerCase().includes(searchLower) ||
-                  backSoonReasons.toLowerCase().includes(searchLower);
-    
-    // Additional search fields when viewing all users
-    if (showAllUsers && session.userId && users[session.userId]) {
-      matches = matches ||
-                users[session.userId].username.toLowerCase().includes(searchLower) ||
-                users[session.userId].email.toLowerCase().includes(searchLower) ||
-                users[session.userId].department.toLowerCase().includes(searchLower);
+    // User filter (only when viewing all users)
+    if (showAllUsers && userFilter && session.userId && users[session.userId]) {
+      const filterLower = userFilter.toLowerCase();
+      const userData = users[session.userId];
+      const matchesUser = userData.username.toLowerCase().includes(filterLower) ||
+                          userData.email.toLowerCase().includes(filterLower) ||
+                          userData.department.toLowerCase().includes(filterLower);
+      if (!matchesUser) return false;
     }
     
-    return matches;
+    // Search query filter
+    if (searchQuery) {
+      const date = formatDate(session.checkInTime);
+      const reason = session.checkOutReason || '';
+      const backSoonReasons = (session.backSoonEvents || []).map(e => e.reason).join(' ');
+      const searchLower = searchQuery.toLowerCase();
+      
+      // Basic search fields (always available)
+      let matches = date.toLowerCase().includes(searchLower) ||
+                    reason.toLowerCase().includes(searchLower) ||
+                    backSoonReasons.toLowerCase().includes(searchLower);
+      
+      // Additional search fields when viewing all users
+      if (showAllUsers && session.userId && users[session.userId]) {
+        matches = matches ||
+                  users[session.userId].username.toLowerCase().includes(searchLower) ||
+                  users[session.userId].email.toLowerCase().includes(searchLower) ||
+                  users[session.userId].department.toLowerCase().includes(searchLower);
+      }
+      
+      if (!matches) return false;
+    }
+    
+    // Online time filter (in minutes)
+    const onlineMinutes = Math.floor((session.totalOnlineTime || 0) / 60);
+    if (minOnlineTime && onlineMinutes < parseInt(minOnlineTime)) return false;
+    if (maxOnlineTime && onlineMinutes > parseInt(maxOnlineTime)) return false;
+    
+    // Back Soon time filter (in minutes)
+    const backSoonMinutes = Math.floor((session.totalBackSoonTime || 0) / 60);
+    if (minBackSoonTime && backSoonMinutes < parseInt(minBackSoonTime)) return false;
+    if (maxBackSoonTime && backSoonMinutes > parseInt(maxBackSoonTime)) return false;
+    
+    return true;
   });
 
   return (
@@ -216,19 +244,114 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({ selectedUserId, showNa
             className="mb-6"
           >
             <Card>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input
-                  type="date"
-                  label="From Date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                />
-                <Input
-                  type="date"
-                  label="To Date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                />
+              <div className="space-y-4">
+                {/* Helper Text */}
+                <div className="bg-primary-500/10 border border-primary-500/20 rounded-lg p-3">
+                  <p className="text-sm text-gray-300">
+                    💡 Use filters to narrow down sessions by {showAllUsers ? 'user, ' : ''}date range, online time, or back soon duration
+                  </p>
+                </div>
+
+                {/* User Filter - Only show when viewing all users */}
+                {showAllUsers && (
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-300 mb-3">Filter by Employee</h3>
+                    <p className="text-xs text-gray-400 mb-2">Search by username, email, or department</p>
+                    <Input
+                      type="text"
+                      placeholder="e.g., John, john@example.com, IT"
+                      value={userFilter}
+                      onChange={(e) => setUserFilter(e.target.value)}
+                      icon={<SearchIcon className="w-5 h-5" />}
+                    />
+                  </div>
+                )}
+
+                {/* Date Range Filter */}
+                <div>
+                  <h3 className="text-sm font-medium text-gray-300 mb-3">Date Range</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Input
+                      type="date"
+                      label="From Date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                    />
+                    <Input
+                      type="date"
+                      label="To Date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Online Time Filter */}
+                <div>
+                  <h3 className="text-sm font-medium text-gray-300 mb-3">Online Time (minutes)</h3>
+                  <p className="text-xs text-gray-400 mb-2">Filter sessions by total online duration</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Input
+                      type="number"
+                      label="Min Online Time"
+                      placeholder="e.g., 30"
+                      value={minOnlineTime}
+                      onChange={(e) => setMinOnlineTime(e.target.value)}
+                      min="0"
+                    />
+                    <Input
+                      type="number"
+                      label="Max Online Time"
+                      placeholder="e.g., 480"
+                      value={maxOnlineTime}
+                      onChange={(e) => setMaxOnlineTime(e.target.value)}
+                      min="0"
+                    />
+                  </div>
+                </div>
+
+                {/* Back Soon Time Filter */}
+                <div>
+                  <h3 className="text-sm font-medium text-gray-300 mb-3">Back Soon Time (minutes)</h3>
+                  <p className="text-xs text-gray-400 mb-2">Filter sessions by back soon duration</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Input
+                      type="number"
+                      label="Min Back Soon Time"
+                      placeholder="e.g., 0"
+                      value={minBackSoonTime}
+                      onChange={(e) => setMinBackSoonTime(e.target.value)}
+                      min="0"
+                    />
+                    <Input
+                      type="number"
+                      label="Max Back Soon Time"
+                      placeholder="e.g., 60"
+                      value={maxBackSoonTime}
+                      onChange={(e) => setMaxBackSoonTime(e.target.value)}
+                      min="0"
+                    />
+                  </div>
+                </div>
+
+                {/* Clear Filters Button */}
+                <div className="flex justify-end">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      setUserFilter('');
+                      setStartDate('');
+                      setEndDate('');
+                      setMinOnlineTime('');
+                      setMaxOnlineTime('');
+                      setMinBackSoonTime('');
+                      setMaxBackSoonTime('');
+                    }}
+                  >
+                    Clear All Filters
+                  </Button>
+                </div>
               </div>
             </Card>
           </motion.div>
@@ -252,7 +375,10 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({ selectedUserId, showNa
             <div className="text-3xl font-bold text-primary-400">
               {formatDuration(stats.totalOnlineTime)}
             </div>
-            <p className="text-sm text-gray-400 mt-2">{sessions.length} sessions</p>
+            <p className="text-sm text-gray-400 mt-2">
+              {sessions.length} total sessions
+              {filteredSessions.length !== sessions.length && ` • ${filteredSessions.length} filtered`}
+            </p>
           </Card>
 
           <Card gradient>

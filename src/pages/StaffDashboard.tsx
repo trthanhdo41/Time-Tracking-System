@@ -27,7 +27,7 @@ import {
   listenToCurrentSession
 } from '@/services/sessionService';
 import { listenToSystemSettings, SystemSettings } from '@/services/systemSettingsService';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { startActivityTracking } from '@/utils/activityTracker';
 import { startUserStatusTracking } from '@/utils/userStatusTracker';
@@ -51,6 +51,7 @@ export const StaffDashboard: React.FC = () => {
   const [currentBackSoonTime, setCurrentBackSoonTime] = useState(0);
   const [captchaPassed, setCaptchaPassed] = useState(false); // Track if CAPTCHA has been passed in this session
   const lastSessionIdRef = useRef<string | null>(null); // Track last session ID to detect new sessions
+  const captchaTimersRef = useRef<{ warning?: NodeJS.Timeout; sound?: NodeJS.Timeout; main?: NodeJS.Timeout } | null>(null);
 
   // Handle URL parameters for tab
   useEffect(() => {
@@ -138,46 +139,43 @@ export const StaffDashboard: React.FC = () => {
     };
   }, [user]);
 
-  // Fetch today's activity logs
+  // Listen to today's activity logs (realtime)
   useEffect(() => {
     if (!user) return;
 
-    const fetchTodayActivities = async () => {
-      try {
-        // Get all activities for this user (no timestamp filter to avoid index requirement)
-        const activitiesQuery = query(
-          collection(db, 'activityLogs'),
-          where('userId', '==', user.id)
-        );
+    // Get all activities for this user (no timestamp filter to avoid index requirement)
+    const activitiesQuery = query(
+      collection(db, 'activityLogs'),
+      where('userId', '==', user.id)
+    );
 
-        const snapshot = await getDocs(activitiesQuery);
-        const activities = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+    const unsubscribe = onSnapshot(activitiesQuery, (snapshot) => {
+      const activities = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
 
-        // Filter today's activities client-side
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const todayStart = today.getTime();
-        
-        const todayActivities = activities.filter((activity: any) => 
-          activity.timestamp >= todayStart
-        );
+      // Filter today's activities client-side
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayStart = today.getTime();
+      
+      const todayActivities = activities.filter((activity: any) => 
+        activity.timestamp >= todayStart
+      );
 
-        // Sort by timestamp descending (client-side)
-        todayActivities.sort((a: any, b: any) => b.timestamp - a.timestamp);
+      // Sort by timestamp descending (client-side)
+      todayActivities.sort((a: any, b: any) => b.timestamp - a.timestamp);
 
-        // Take only latest 10
-        setTodayActivities(todayActivities.slice(0, 10));
-      } catch (error) {
-        console.error('Error fetching activities:', error);
-        setTodayActivities([]);
-      }
-    };
+      // Take only latest 10
+      setTodayActivities(todayActivities.slice(0, 10));
+    }, (error) => {
+      console.error('Error listening to activities:', error);
+      setTodayActivities([]);
+    });
 
-    fetchTodayActivities();
-  }, [user, currentSession]); // Refetch when session changes
+    return () => unsubscribe();
+  }, [user]); // Only depend on user, not currentSession
 
 
   // Update current time and calculate times
@@ -274,52 +272,117 @@ export const StaffDashboard: React.FC = () => {
     }
   }, [status, currentSession?.id]); // Watch sessionId to detect new sessions
 
-  // CAPTCHA trigger - only once per session
+  // Function to schedule CAPTCHA
+  const scheduleCaptcha = useRef(() => {
+    if (!settings || status !== 'online') return;
+    
+    // Clear existing timers
+    if (captchaTimersRef.current) {
+      if (captchaTimersRef.current.warning) clearTimeout(captchaTimersRef.current.warning);
+      if (captchaTimersRef.current.sound) clearTimeout(captchaTimersRef.current.sound);
+      if (captchaTimersRef.current.main) clearTimeout(captchaTimersRef.current.main);
+    }
+    
+    const intervalMs = settings.captcha.intervalMinutes * 60 * 1000;
+    
+    // Show notification + sound 15 seconds before CAPTCHA
+    const warningTimer = setTimeout(() => {
+      if (status === 'online') {
+        toast('CAPTCHA will appear in 15 seconds. Please prepare.', {
+          icon: '🔐',
+          duration: 4000,
+        });
+        soundManager.playCaptchaNotification();
+      }
+    }, intervalMs - 15000);
+    
+    // Play notification sound 5 seconds before
+    const soundTimer = setTimeout(() => {
+      if (status === 'online') {
+        soundManager.playCaptchaNotification();
+      }
+    }, intervalMs - 5000);
+    
+    // Show CAPTCHA modal
+    const captchaTimer = setTimeout(() => {
+      if (status === 'online') {
+        setShowCaptcha(true);
+      }
+    }, intervalMs);
+    
+    captchaTimersRef.current = {
+      warning: warningTimer,
+      sound: soundTimer,
+      main: captchaTimer
+    };
+  });
+
+  // Update scheduleCaptcha ref when settings/status change
   useEffect(() => {
-    // Only trigger CAPTCHA if:
-    // 1. User is online
-    // 2. Settings are loaded
-    // 3. CAPTCHA hasn't been passed yet in this session
-    if (status === 'online' && settings && !captchaPassed) {
+    scheduleCaptcha.current = () => {
+      if (!settings || status !== 'online') return;
+      
+      // Clear existing timers
+      if (captchaTimersRef.current) {
+        if (captchaTimersRef.current.warning) clearTimeout(captchaTimersRef.current.warning);
+        if (captchaTimersRef.current.sound) clearTimeout(captchaTimersRef.current.sound);
+        if (captchaTimersRef.current.main) clearTimeout(captchaTimersRef.current.main);
+      }
+      
       const intervalMs = settings.captcha.intervalMinutes * 60 * 1000;
       
       // Show notification + sound 15 seconds before CAPTCHA
       const warningTimer = setTimeout(() => {
-        if (!captchaPassed && status === 'online') {
+        if (status === 'online') {
           toast('CAPTCHA will appear in 15 seconds. Please prepare.', {
             icon: '🔐',
             duration: 4000,
           });
-          soundManager.playCaptchaNotification(); // Play loud notification sound
+          soundManager.playCaptchaNotification();
         }
       }, intervalMs - 15000);
       
       // Play notification sound 5 seconds before
       const soundTimer = setTimeout(() => {
-        if (!captchaPassed && status === 'online') {
+        if (status === 'online') {
           soundManager.playCaptchaNotification();
         }
       }, intervalMs - 5000);
       
       // Show CAPTCHA modal
       const captchaTimer = setTimeout(() => {
-        // Only show CAPTCHA if it hasn't been passed yet
-        if (!captchaPassed) {
+        if (status === 'online') {
           setShowCaptcha(true);
         }
       }, intervalMs);
       
-      return () => {
-        clearTimeout(warningTimer);
-        clearTimeout(soundTimer);
-        clearTimeout(captchaTimer);
+      captchaTimersRef.current = {
+        warning: warningTimer,
+        sound: soundTimer,
+        main: captchaTimer
       };
+    };
+  }, [settings, status]);
+
+  // CAPTCHA trigger - schedule on check-in
+  useEffect(() => {
+    if (status === 'online' && settings) {
+      scheduleCaptcha.current();
     }
-  }, [status, currentSession, settings, captchaPassed]);
+    
+    return () => {
+      // Cleanup timers on unmount or status change
+      if (captchaTimersRef.current) {
+        if (captchaTimersRef.current.warning) clearTimeout(captchaTimersRef.current.warning);
+        if (captchaTimersRef.current.sound) clearTimeout(captchaTimersRef.current.sound);
+        if (captchaTimersRef.current.main) clearTimeout(captchaTimersRef.current.main);
+      }
+    };
+  }, [status, currentSession?.id, settings]); // Trigger on new session
 
   const handleCaptchaSuccess = async () => {
     setShowCaptcha(false);
-    setCaptchaPassed(true); // Mark CAPTCHA as passed - won't trigger again in this session
+    setCaptchaPassed(true); // Temporarily mark as passed
     toast.success('Verification successful!');
     
     // Check if we need to trigger Face Verification
@@ -335,6 +398,12 @@ export const StaffDashboard: React.FC = () => {
         }, 1000); // Small delay for UX
       }
     }
+
+    // Schedule next CAPTCHA
+    setTimeout(() => {
+      setCaptchaPassed(false);
+      scheduleCaptcha.current();
+    }, 2000);
   };
 
   const handleCaptchaFail = async () => {

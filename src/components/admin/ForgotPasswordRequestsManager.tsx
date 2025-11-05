@@ -276,7 +276,6 @@ export const ForgotPasswordRequestsManager: React.FC = () => {
               variant="secondary"
               onClick={() => {
                 setShowApproveModal(false);
-                setNewPassword('');
                 setSelectedRequest(null);
               }}
               className="flex-1"

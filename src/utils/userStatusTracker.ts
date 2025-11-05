@@ -10,7 +10,7 @@ let tabHiddenCheckoutTimer: NodeJS.Timeout | null = null;
 
 // Heartbeat only runs when tab is visible
 const HEARTBEAT_INTERVAL = 15000; // 15 seconds when visible
-const TAB_HIDDEN_CHECKOUT_TIMEOUT = 60000; // Auto checkout after 1 minute of tab hidden
+const TAB_HIDDEN_CHECKOUT_TIMEOUT = 30000; // Auto checkout after 30 seconds of tab hidden
 
 export const startUserStatusTracking = (userId: string, sessionId?: string) => {
   // Clear any existing interval
@@ -72,30 +72,37 @@ export const startUserStatusTracking = (userId: string, sessionId?: string) => {
     startHeartbeat();
   }
 
-  // Add beforeunload listener - try to checkout session before page closes
-  const handleBeforeUnload = async () => {
+  // Add beforeunload listener - mark session for cleanup
+  const handleBeforeUnload = () => {
     if (currentUserId) {
       try {
-        // Try to checkout session if exists
+        // Mark last activity as very old so cleanup service picks it up immediately
+        const veryOldTime = Date.now() - (10 * 60 * 1000); // 10 minutes ago
+        
+        // Use synchronous operation to ensure it runs before page closes
+        navigator.sendBeacon && navigator.sendBeacon('/api/logout', JSON.stringify({ 
+          userId: currentUserId, 
+          sessionId: currentSessionId 
+        }));
+        
+        // Also try direct update (may not complete but worth trying)
         if (currentSessionId) {
-          const { getCurrentUser } = await import('@/services/auth');
-          const user = await getCurrentUser(currentUserId);
-          if (user) {
-            try {
-              await checkOutSession(currentSessionId, 'User closed browser/tab', user);
-            } catch (error) {
-              console.error('Error checking out session on beforeunload:', error);
-            }
-          }
+          updateDoc(doc(db, 'sessions', currentSessionId), {
+            lastActivityTime: veryOldTime
+          }).catch(() => {
+            // Ignore errors - cleanup service will handle it
+          });
         }
         
-        // Update user status to offline
-        await updateDoc(doc(db, 'users', currentUserId), {
+        updateDoc(doc(db, 'users', currentUserId), {
           status: 'offline',
+          lastActivityAt: veryOldTime,
           lastLogoutAt: Date.now()
+        }).catch(() => {
+          // Ignore errors - cleanup service will handle it
         });
       } catch (error) {
-        console.error('Error updating status on browser close:', error);
+        console.error('Error in beforeunload:', error);
       }
     }
   };
@@ -129,11 +136,19 @@ export const startUserStatusTracking = (userId: string, sessionId?: string) => {
       tabHiddenCheckoutTimer = setTimeout(async () => {
         if (currentSessionId && currentUserId && document.visibilityState === 'hidden') {
           try {
-            const { getCurrentUser } = await import('@/services/auth');
-            const user = await getCurrentUser(currentUserId);
-            if (user) {
-              await checkOutSession(currentSessionId, 'Tab hidden for 1+ minute', user);
-              console.log('Auto checked out session due to tab hidden for 1+ minute');
+            // Check if session is still active before checking out
+            const { getDoc } = await import('firebase/firestore');
+            const sessionDoc = await getDoc(doc(db, 'sessions', currentSessionId));
+            
+            if (sessionDoc.exists() && sessionDoc.data()?.status !== 'offline') {
+              const { getCurrentUser } = await import('@/services/auth');
+              const user = await getCurrentUser(currentUserId);
+              if (user) {
+                await checkOutSession(currentSessionId, 'Tab hidden for 30+ seconds', user);
+                console.log('Auto checked out session due to tab hidden for 30+ seconds');
+              }
+            } else {
+              console.log(`Session ${currentSessionId} already checked out. Skipping tab hidden checkout.`);
             }
           } catch (error) {
             console.error('Error auto checking out session:', error);

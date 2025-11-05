@@ -9,6 +9,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useSessionStore } from '@/store/sessionStore';
 import { updateCaptchaAttempt, checkOutSession } from '@/services/sessionService';
 import { listenToSystemSettings, SystemSettings } from '@/services/systemSettingsService';
+import { logActivity } from '@/services/activityLog';
 import toast from 'react-hot-toast';
 
 interface CaptchaModalProps {
@@ -82,9 +83,24 @@ export const CaptchaModal: React.FC<CaptchaModalProps> = ({
   const handleTimeout = async () => {
     if (user && currentSession) {
       try {
+        // Log activity before checkout
+        await logActivity(
+          user.id,
+          user.username,
+          user.role,
+          user.department,
+          user.position,
+          'auto_checkout',
+          'Auto checkout: CAPTCHA timeout',
+          user.id,
+          user.role,
+          user.department,
+          { reason: 'CAPTCHA timeout', sessionId: currentSession.id }
+        );
+        
         await checkOutSession(currentSession.id, 'CAPTCHA timeout', user);
         useSessionStore.getState().setSession(null);
-    useSessionStore.getState().setStatus('offline');
+        useSessionStore.getState().setStatus('offline');
       } catch (error) {
         console.error('Auto checkout error:', error);
       }
@@ -118,10 +134,25 @@ export const CaptchaModal: React.FC<CaptchaModalProps> = ({
 
       const maxAttempts = settings?.captcha.maxAttempts || 3;
       if (newAttempts >= maxAttempts) {
+        // Log activity before auto checkout
+        await logActivity(
+          user.id,
+          user.username,
+          user.role,
+          user.department,
+          user.position,
+          'auto_checkout',
+          `Auto checkout: Failed CAPTCHA verification after ${maxAttempts} attempts`,
+          user.id,
+          user.role,
+          user.department,
+          { reason: 'Failed CAPTCHA', attempts: maxAttempts, sessionId: currentSession.id }
+        );
+        
         // Auto checkout
         await checkOutSession(currentSession.id, 'Failed CAPTCHA verification', user);
         useSessionStore.getState().setSession(null);
-    useSessionStore.getState().setStatus('offline');
+        useSessionStore.getState().setStatus('offline');
         
         toast.error(`${maxAttempts} incorrect attempts! You have been checked out.`);
         soundManager.playError();
