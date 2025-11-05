@@ -7,6 +7,7 @@ import { CameraIcon, CheckIcon, XIcon } from '@/components/icons';
 import { detectFace, compareFaces, loadFaceDetectionModels } from '@/utils/faceRecognition';
 import { uploadImageToImgbb, isImageUploadConfigured } from '@/utils/imageUpload';
 import { soundManager } from '@/utils/sound';
+import { checkCameraPermission, requestCameraPermission } from '@/utils/cameraPermission';
 import { User } from '@/types';
 import toast from 'react-hot-toast';
 
@@ -37,7 +38,9 @@ export const FaceVerificationModal: React.FC<FaceVerificationModalProps> = ({
       setStep('camera');
       setError('');
       setLoading(false);
-      startCamera();
+      
+      // Check camera permission before starting camera
+      checkAndStartCamera();
     } else {
       stopCamera();
     }
@@ -57,6 +60,35 @@ export const FaceVerificationModal: React.FC<FaceVerificationModalProps> = ({
     };
   }, [isOpen]);
 
+  const checkAndStartCamera = async () => {
+    try {
+      // Check camera permission first
+      const hasPermission = await checkCameraPermission();
+      
+      if (!hasPermission) {
+        // Request permission
+        try {
+          await requestCameraPermission();
+          toast.success('Camera permission granted');
+        } catch (error: any) {
+          console.error('Error requesting camera permission:', error);
+          toast.error('Camera permission is required for Face ID verification');
+          setError('Camera permission denied');
+          setStep('error');
+          return;
+        }
+      }
+      
+      // Start camera after permission is granted
+      await startCamera();
+    } catch (error: any) {
+      console.error('Error checking/starting camera:', error);
+      toast.error('Unable to access camera');
+      setError('Camera unavailable');
+      setStep('error');
+    }
+  };
+
   const startCamera = async () => {
     try {
       await loadFaceDetectionModels();
@@ -74,8 +106,9 @@ export const FaceVerificationModal: React.FC<FaceVerificationModalProps> = ({
       }
     } catch (error) {
       console.error('Error accessing camera:', error);
-      toast.error('Không thể truy cập camera');
-      setError('Camera không khả dụng');
+      toast.error('Unable to access camera');
+      setError('Camera unavailable');
+      setStep('error');
     }
   };
 
@@ -108,7 +141,7 @@ export const FaceVerificationModal: React.FC<FaceVerificationModalProps> = ({
       const detection = await detectFace(videoRef.current);
       
       if (!detection) {
-        throw new Error('Không phát hiện khuôn mặt. Vui lòng thử lại.');
+        throw new Error('No face detected. Please try again.');
       }
 
       // Compare with Face0 (base face)
@@ -126,7 +159,7 @@ export const FaceVerificationModal: React.FC<FaceVerificationModalProps> = ({
           const similarity = compareFaces(detection.descriptor, baseFaceDetection.descriptor);
           
           if (similarity < 0.6) {
-            throw new Error('Khuôn mặt không khớp với Face0.');
+            throw new Error('Face does not match Face0.');
           }
         }
       }
@@ -146,7 +179,7 @@ export const FaceVerificationModal: React.FC<FaceVerificationModalProps> = ({
           const similarity = compareFaces(detection.descriptor, face1Detection.descriptor);
           
           if (similarity < 0.6) {
-            throw new Error('Khuôn mặt không khớp với Face1.');
+            throw new Error('Face does not match Face1.');
           }
         }
       }
@@ -166,7 +199,7 @@ export const FaceVerificationModal: React.FC<FaceVerificationModalProps> = ({
           );
         } catch (uploadError) {
           console.error('Face2 upload error:', uploadError);
-          toast.error('Không thể upload ảnh Face2');
+          toast.error('Unable to upload Face2 image');
         }
       }
 
@@ -297,14 +330,14 @@ export const FaceVerificationModal: React.FC<FaceVerificationModalProps> = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Xác Thực Khuôn Mặt (Face2)">
+    <Modal isOpen={isOpen} onClose={onClose} title="Face Verification (Face2)">
       <div className="space-y-6">
         <div className="text-center">
           <p className="text-gray-300 mb-4">
-            Vui lòng nhìn vào funnel để xác thực khuôn mặt
+            Please look at the camera to verify your face
           </p>
           <p className="text-sm text-gray-400">
-            Hệ thống sẽ so sánh với Face0 và Face1 đã lưu
+            System will compare with saved Face0 and Face1
           </p>
         </div>
 
@@ -327,7 +360,7 @@ export const FaceVerificationModal: React.FC<FaceVerificationModalProps> = ({
               >
                 <div className="text-center">
                   <LoadingSpinner size="lg" />
-                  <p className="text-white mt-4">Đang xử lý...</p>
+                  <p className="text-white mt-4">Processing...</p>
                 </div>
               </motion.div>
             )}
@@ -341,7 +374,7 @@ export const FaceVerificationModal: React.FC<FaceVerificationModalProps> = ({
             >
               <div className="text-center text-green-400">
                 <CheckIcon className="w-16 h-16 mx-auto mb-4" />
-                <p className="text-xl font-semibold">Xác thực thành công!</p>
+                <p className="text-xl font-semibold">Verification Successful!</p>
               </div>
             </motion.div>
           )}
@@ -354,7 +387,7 @@ export const FaceVerificationModal: React.FC<FaceVerificationModalProps> = ({
             >
               <div className="text-center text-red-400">
                 <XIcon className="w-16 h-16 mx-auto mb-4" />
-                <p className="text-xl font-semibold">Xác thực thất bại!</p>
+                <p className="text-xl font-semibold">Verification Failed!</p>
                 <p className="text-sm mt-2">{error}</p>
               </div>
             </motion.div>
@@ -368,7 +401,7 @@ export const FaceVerificationModal: React.FC<FaceVerificationModalProps> = ({
             className="flex-1"
             disabled={loading}
           >
-            Không xác thực (Check Out)
+            Skip Verification (Check Out)
           </Button>
           <Button
             onClick={handleVerify}
@@ -376,7 +409,7 @@ export const FaceVerificationModal: React.FC<FaceVerificationModalProps> = ({
             className="flex-1"
           >
             <CameraIcon className="w-4 h-4 mr-2" />
-            Xác Thực Face2
+            Verify Face2
           </Button>
         </div>
       </div>

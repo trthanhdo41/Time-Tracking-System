@@ -113,7 +113,7 @@ const autoCheckoutSession = async (sessionId: string, sessionData: any, timeSinc
     await updateDoc(doc(db, 'sessions', sessionId), {
       status: 'offline',
       checkOutTime: now,
-      checkOutReason: `Tự động checkout - Không hoạt động ${inactiveMinutes} phút (Auto cleanup)`,
+      checkOutReason: `Auto checkout - Inactive for ${inactiveMinutes} minutes (Auto cleanup)`,
       totalOnlineTime,
       totalBackSoonTime,
       backSoonEvents,
@@ -128,7 +128,7 @@ const autoCheckoutSession = async (sessionId: string, sessionData: any, timeSinc
       sessionData.department,
       sessionData.position,
       'check_out',
-      `Tự động checkout - Không hoạt động ${inactiveMinutes} phút`
+      `Auto checkout - Inactive for ${inactiveMinutes} minutes`
     );
 
     console.log(`Session ${sessionId} auto checked out successfully`);

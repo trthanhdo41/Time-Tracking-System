@@ -23,7 +23,7 @@ export const SystemSettingsPage: React.FC = () => {
   const [captchaMaxAttempts, setCaptchaMaxAttempts] = useState(3);
   const [captchaTimeout, setCaptchaTimeout] = useState(180);
   const [faceCheckCount, setFaceCheckCount] = useState(3);
-  const [faceSimilarity, setFaceSimilarity] = useState(0.6);
+  const [faceSimilarity, setFaceSimilarity] = useState(0.7); // Increased from 0.6 to 0.7
   const [autoLogout, setAutoLogout] = useState(true);
   const [sessionTimeout, setSessionTimeout] = useState(12);
 
@@ -70,10 +70,10 @@ export const SystemSettingsPage: React.FC = () => {
       };
 
       await updateSystemSettings(newSettings, user.username);
-      toast.success('Cài đặt đã được lưu và đồng bộ đến tất cả client!');
+      toast.success('Settings saved and synced to all clients!');
     } catch (error) {
       console.error('Error saving settings:', error);
-      toast.error('Không thể lưu cài đặt');
+      toast.error('Unable to save settings');
     } finally {
       setSaving(false);
     }
@@ -90,7 +90,7 @@ export const SystemSettingsPage: React.FC = () => {
     setAutoLogout(settings.general.autoLogoutEnabled);
     setSessionTimeout(settings.general.sessionTimeoutHours);
     
-    toast.info('Đã khôi phục giá trị ban đầu');
+    toast.success('Restored to default values');
   };
 
   if (loading) {
@@ -112,10 +112,10 @@ export const SystemSettingsPage: React.FC = () => {
         >
           <div className="flex items-center gap-3 mb-2">
             <SettingsIcon className="w-8 h-8 text-primary-500" />
-            <h1 className="text-4xl font-bold">Cài Đặt Hệ Thống</h1>
+            <h1 className="text-4xl font-bold">System Settings</h1>
           </div>
           <p className="text-gray-400 text-lg">
-            Điều chỉnh các thông số hệ thống - Thay đổi sẽ được đồng bộ realtime đến tất cả client
+            Adjust system parameters - Changes will be synced in realtime to all clients
           </p>
         </motion.div>
 
@@ -127,10 +127,10 @@ export const SystemSettingsPage: React.FC = () => {
           >
             <div className="flex items-center justify-between text-sm text-gray-400 mb-4">
               <span>
-                Cập nhật lần cuối: {new Date(settings.updatedAt).toLocaleString('vi-VN')}
+                Last updated: {new Date(settings.updatedAt).toLocaleString('en-US')}
               </span>
               {settings.updatedBy && (
-                <span>Bởi: {settings.updatedBy}</span>
+                <span>By: {settings.updatedBy}</span>
               )}
             </div>
           </motion.div>
@@ -151,7 +151,7 @@ export const SystemSettingsPage: React.FC = () => {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  CAPTCHA Interval (phút)
+                  CAPTCHA Interval (minutes)
                 </label>
                 <input
                   type="number"
@@ -162,13 +162,13 @@ export const SystemSettingsPage: React.FC = () => {
                   className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
                 <p className="text-xs text-gray-400 mt-1">
-                  Khoảng thời gian giữa các lần yêu cầu CAPTCHA (khuyến nghị: 30 phút, test: 1 phút)
+                  Interval between CAPTCHA requests (recommended: 30 minutes, test: 1 minute)
                 </p>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Max Attempts (lần)
+                  Max Attempts
                 </label>
                 <input
                   type="number"
@@ -179,13 +179,13 @@ export const SystemSettingsPage: React.FC = () => {
                   className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
                 <p className="text-xs text-gray-400 mt-1">
-                  Số lần nhập sai tối đa trước khi auto check out
+                  Maximum incorrect attempts before auto check out
                 </p>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Timeout (giây)
+                  Timeout (seconds)
                 </label>
                 <input
                   type="number"
@@ -196,7 +196,7 @@ export const SystemSettingsPage: React.FC = () => {
                   className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
                 <p className="text-xs text-gray-400 mt-1">
-                  Thời gian tối đa để hoàn thành CAPTCHA (khuyến nghị: 180s = 3 phút)
+                  Maximum time to complete CAPTCHA (recommended: 180s = 3 minutes)
                 </p>
               </div>
             </div>
@@ -227,7 +227,7 @@ export const SystemSettingsPage: React.FC = () => {
                   className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
                 <p className="text-xs text-gray-400 mt-1">
-                  Sau bao nhiêu lần CAPTCHA thành công thì yêu cầu Face Verification (khuyến nghị: 3-5)
+                  After how many successful CAPTCHAs to require Face Verification (recommended: 3-5)
                 </p>
               </div>
 
@@ -245,7 +245,7 @@ export const SystemSettingsPage: React.FC = () => {
                   className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
                 <p className="text-xs text-gray-400 mt-1">
-                  Ngưỡng tương đồng khuôn mặt (0-1). Thấp = dễ pass, Cao = khó pass (khuyến nghị: 0.6)
+                  Face similarity threshold (0-1). Low = easier to pass, High = harder to pass (recommended: 0.7)
                 </p>
               </div>
 
@@ -253,62 +253,27 @@ export const SystemSettingsPage: React.FC = () => {
                 <div className="flex items-start gap-2">
                   <WarningIcon className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
                   <p className="text-sm text-yellow-400">
-                    <strong>Lưu ý:</strong> Threshold quá cao có thể gây false negative (từ chối người đúng). 
-                    Nên test kỹ trước khi áp dụng.
+                    <strong>Note:</strong> Too high threshold may cause false negatives (rejecting correct person). 
+                    Test thoroughly before applying.
                   </p>
                 </div>
               </div>
             </div>
           </motion.div>
 
-          {/* General Settings */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-dark-800 rounded-xl p-6 border border-dark-700 lg:col-span-2"
-          >
-            <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-              <SettingsIcon className="w-6 h-6 text-primary-500" />
-              General Settings
-            </h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={autoLogout}
-                    onChange={(e) => setAutoLogout(e.target.checked)}
-                    className="w-5 h-5 text-primary-500 bg-dark-700 border-dark-600 rounded focus:ring-primary-500"
-                  />
-                  <span className="text-sm font-medium text-gray-300">
-                    Tự động logout khi hết session
-                  </span>
-                </label>
-                <p className="text-xs text-gray-400 mt-2 ml-8">
-                  Tự động check out nhân viên khi vượt quá thời gian session
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Session Timeout (giờ)
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="24"
-                  value={sessionTimeout}
-                  onChange={(e) => setSessionTimeout(parseInt(e.target.value) || 1)}
-                  className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  disabled={!autoLogout}
-                />
-                <p className="text-xs text-gray-400 mt-1">
-                  Thời gian tối đa của 1 session làm việc (khuyến nghị: 12 giờ)
-                </p>
-              </div>
-            </div>
-          </motion.div>
+          {/* General Settings - Hidden section with state management */}
+          <div className="hidden">
+            <input
+              type="checkbox"
+              checked={autoLogout}
+              onChange={(e) => setAutoLogout(e.target.checked)}
+            />
+            <input
+              type="number"
+              value={sessionTimeout}
+              onChange={(e) => setSessionTimeout(parseInt(e.target.value) || 1)}
+            />
+          </div>
         </div>
 
         {/* Action Buttons */}
@@ -323,7 +288,7 @@ export const SystemSettingsPage: React.FC = () => {
             disabled={saving}
             size="lg"
           >
-            Khôi Phục
+            Reset
           </Button>
           <Button
             onClick={handleSave}
@@ -334,10 +299,10 @@ export const SystemSettingsPage: React.FC = () => {
             {saving ? (
               <>
                 <LoadingSpinner size="sm" className="mr-2" />
-                Đang lưu...
+                Saving...
               </>
             ) : (
-              'Lưu & Đồng Bộ'
+              'Save & Sync'
             )}
           </Button>
         </motion.div>
@@ -351,13 +316,13 @@ export const SystemSettingsPage: React.FC = () => {
         >
           <h3 className="text-lg font-semibold text-blue-400 mb-3 flex items-center gap-2">
             <InfoIcon className="w-5 h-5" />
-            Về Realtime Sync
+            About Realtime Sync
           </h3>
           <ul className="space-y-2 text-sm text-gray-300">
-            <li>• Mọi thay đổi sẽ được lưu vào Firebase và đồng bộ realtime đến tất cả client</li>
-            <li>• Nhân viên đang online sẽ nhận được cài đặt mới ngay lập tức</li>
-            <li>• Không cần restart server hay refresh browser</li>
-            <li>• Lịch sử thay đổi được ghi nhận (người thay đổi + thời gian)</li>
+            <li>• All changes will be saved to Firebase and synced in realtime to all clients</li>
+            <li>• Online employees will receive new settings immediately</li>
+            <li>• No need to restart server or refresh browser</li>
+            <li>• Change history is recorded (who changed + when)</li>
           </ul>
         </motion.div>
       </div>

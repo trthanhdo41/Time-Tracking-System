@@ -22,7 +22,7 @@ export const StaffNavigation: React.FC = () => {
     },
     {
       icon: <HistoryIcon className="w-5 h-5" />,
-      label: 'Lịch Sử',
+      label: 'History',
       path: '/history',
       active: location.pathname === '/history'
     },
@@ -34,7 +34,7 @@ export const StaffNavigation: React.FC = () => {
     },
     {
       icon: <CameraIcon className="w-5 h-5" />,
-      label: 'Thư Viện Ảnh',
+      label: 'Image Gallery',
       path: '/images',
       active: location.pathname === '/images'
     }

@@ -33,7 +33,7 @@ export const getAllUsers = async (): Promise<User[]> => {
     } as User));
   } catch (error) {
     console.error('Error getting users:', error);
-    throw new Error('Không thể tải danh sách người dùng');
+    throw new Error('Unable to load user list');
   }
 };
 
@@ -52,7 +52,7 @@ export const getUsersByDepartment = async (department: string): Promise<User[]> 
     } as User));
   } catch (error) {
     console.error('Error getting users by department:', error);
-    throw new Error('Không thể tải danh sách người dùng');
+    throw new Error('Unable to load user list');
   }
 };
 
@@ -67,15 +67,28 @@ export const createNewUser = async (
   department: string,
   position: string,
   performedBy: User,
-  faceImageUrl?: string // Optional Face0 URL
+  faceImageUrl?: string, // Optional Face0 URL
+  fullName?: string, // Optional full name for display
+  adminPassword?: string // Admin password to re-login after creating user
 ): Promise<User> => {
   try {
+    // Validate role permissions
+    // Only Admin can create Admin and Department Admin accounts
+    // Department Admin can only create Staff accounts
+    if (performedBy.role === 'department_admin') {
+      if (role !== 'staff') {
+        throw new Error('Department Admin can only create Staff accounts');
+      }
+    }
+    // Admin can create any role (admin, department_admin, staff)
+    
     // Create user in Firebase Auth
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     
     const newUser: User = {
       id: userCredential.user.uid,
-      username,
+      username, // Username for login/forgot password
+      fullName: fullName || username, // Full name for display (fallback to username if not provided)
       email,
       role,
       department,
@@ -98,28 +111,44 @@ export const createNewUser = async (
       newUser.department,
       newUser.position,
       'account_created',
-      `Tài khoản được tạo bởi ${performedBy.username}`,
+      `Account created by ${performedBy.username}`,
       performedBy.id,
       performedBy.role,
       performedBy.department
     );
 
-    // IMPORTANT: Sign out the new user to prevent auto-login
-    // This keeps the admin logged in
+    // IMPORTANT: Firebase limitation - createUserWithEmailAndPassword automatically signs in the new user
+    // Solution: Sign out the new user immediately, then automatically re-login admin
     await signOut(auth);
     
-    // Note: In production, use Firebase Admin SDK on server to avoid this issue
+    // Automatically re-login admin if password is available (auto-saved when admin logged in)
+    if (adminPassword && performedBy.email) {
+      try {
+        const { signInWithEmailAndPassword } = await import('firebase/auth');
+        await signInWithEmailAndPassword(auth, performedBy.email, adminPassword);
+        console.log('✅ Admin automatically re-logged in');
+      } catch (loginError: any) {
+        console.error('⚠️ Failed to auto re-login admin:', loginError);
+        // Clear saved credentials if login fails (password may have changed)
+        sessionStorage.removeItem('admin_email_for_relogin');
+        sessionStorage.removeItem('admin_password_for_relogin');
+        // Don't throw error - just let admin login manually
+        console.warn('Admin needs to login manually');
+      }
+    } else {
+      console.warn('Admin password not available - admin will need to login manually');
+    }
 
     return newUser;
   } catch (error: any) {
     console.error('Error creating user:', error);
     
     if (error.code === 'auth/email-already-in-use') {
-      throw new Error('Email đã được sử dụng');
+      throw new Error('Email already in use');
     } else if (error.code === 'auth/weak-password') {
-      throw new Error('Mật khẩu quá yếu (tối thiểu 6 ký tự)');
+      throw new Error('Password too weak (minimum 6 characters)');
     } else {
-      throw new Error('Không thể tạo người dùng');
+      throw new Error('Unable to create user');
     }
   }
 };
@@ -132,7 +161,7 @@ export const deleteUser = async (userId: string, performedBy: User): Promise<voi
     const userDoc = await getDocs(query(collection(db, 'users'), where('id', '==', userId)));
     
     if (userDoc.empty) {
-      throw new Error('Không tìm thấy người dùng');
+      throw new Error('User not found');
     }
 
     const userData = userDoc.docs[0].data() as User;
@@ -148,14 +177,14 @@ export const deleteUser = async (userId: string, performedBy: User): Promise<voi
       userData.department,
       userData.position,
       'account_deleted',
-      `Tài khoản bị xóa bởi ${performedBy.username}`,
+      `Account deleted by ${performedBy.username}`,
       performedBy.id,
       performedBy.role,
       performedBy.department
     );
   } catch (error) {
     console.error('Error deleting user:', error);
-    throw new Error('Không thể xóa người dùng');
+    throw new Error('Unable to delete user');
   }
 };
 
@@ -164,14 +193,14 @@ export const deleteUser = async (userId: string, performedBy: User): Promise<voi
  */
 export const updateUser = async (
   userId: string,
-  updates: Partial<Pick<User, 'username' | 'email' | 'department' | 'position' | 'role' | 'faceImageUrl'>>,
+  updates: Partial<Pick<User, 'username' | 'fullName' | 'email' | 'department' | 'position' | 'role' | 'faceImageUrl'>>,
   performedBy: User
 ): Promise<void> => {
   try {
     const userDoc = await getDocs(query(collection(db, 'users'), where('id', '==', userId)));
     
     if (userDoc.empty) {
-      throw new Error('Không tìm thấy người dùng');
+      throw new Error('User not found');
     }
 
     const userData = userDoc.docs[0].data() as User;
@@ -193,14 +222,14 @@ export const updateUser = async (
       userData.department,
       userData.position,
       'account_updated',
-      `Thông tin tài khoản được cập nhật: ${changes} bởi ${performedBy.username}`,
+      `Account information updated: ${changes} by ${performedBy.username}`,
       performedBy.id,
       performedBy.role,
       performedBy.department
     );
   } catch (error) {
     console.error('Error updating user:', error);
-    throw new Error('Không thể cập nhật thông tin người dùng');
+    throw new Error('Unable to update user information');
   }
 };
 
@@ -237,7 +266,7 @@ export const getUserSessions = async (userId: string): Promise<Session[]> => {
     return sessions;
   } catch (error) {
     console.error('Error getting user sessions:', error);
-    throw new Error('Không thể tải lịch sử làm việc');
+    throw new Error('Unable to load work history');
   }
 };
 
@@ -253,7 +282,7 @@ export const resetUserPassword = async (
     const userDoc = await getDocs(query(collection(db, 'users'), where('id', '==', userId)));
     
     if (userDoc.empty) {
-      throw new Error('Không tìm thấy người dùng');
+      throw new Error('User not found');
     }
 
     const userData = userDoc.docs[0].data() as User;
@@ -268,14 +297,14 @@ export const resetUserPassword = async (
       userData.department,
       userData.position,
       'password_reset',
-      `Mật khẩu được reset bởi ${performedBy.username}`,
+      `Password reset by ${performedBy.username}`,
       performedBy.id,
       performedBy.role,
       performedBy.department
     );
   } catch (error) {
     console.error('Error resetting password:', error);
-    throw new Error('Không thể reset mật khẩu');
+    throw new Error('Unable to reset password');
   }
 };
 

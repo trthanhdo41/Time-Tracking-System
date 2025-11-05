@@ -20,11 +20,11 @@ export const DeviceBlockModal: React.FC<DeviceBlockModalProps> = ({ deviceType }
   const getDeviceName = () => {
     switch (deviceType) {
       case 'mobile':
-        return 'Điện thoại di động';
+        return 'Mobile Phone';
       case 'tablet':
-        return 'Máy tính bảng';
+        return 'Tablet';
       default:
-        return 'Thiết bị di động';
+        return 'Mobile Device';
     }
   };
 
@@ -34,31 +34,31 @@ export const DeviceBlockModal: React.FC<DeviceBlockModalProps> = ({ deviceType }
         {getDeviceIcon()}
         
         <h2 className="text-2xl font-bold text-gray-900 mb-4">
-          Truy cập bị hạn chế
+          Access Restricted
         </h2>
         
         <p className="text-gray-600 mb-6">
-          Ứng dụng chỉ hỗ trợ truy cập từ <strong>máy tính để bàn</strong>.
+          Application only supports access from <strong>desktop computers</strong>.
           <br />
-          Thiết bị hiện tại: <span className="text-red-600 font-semibold">{getDeviceName()}</span>
+          Current device: <span className="text-red-600 font-semibold">{getDeviceName()}</span>
         </p>
         
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
           <div className="flex items-center justify-center mb-2">
             <MonitorIcon className="w-8 h-8 text-blue-600 mr-2" />
-            <span className="text-blue-800 font-semibold">Yêu cầu:</span>
+            <span className="text-blue-800 font-semibold">Requirement:</span>
           </div>
           <p className="text-blue-700 text-sm">
-            Vui lòng sử dụng máy tính để bàn hoặc laptop để truy cập ứng dụng.
+            Please use a desktop computer or laptop to access the application.
           </p>
         </div>
         
         <div className="text-sm text-gray-500">
-          <p>Nếu bạn đang sử dụng máy tính, vui lòng:</p>
+          <p>If you are using a computer, please:</p>
           <ul className="mt-2 text-left">
-            <li>• Tắt chế độ responsive trong Developer Tools</li>
-            <li>• Đảm bảo màn hình có độ phân giải ≥ 1024px</li>
-            <li>• Refresh trang web</li>
+            <li>• Disable responsive mode in Developer Tools</li>
+            <li>• Ensure screen resolution ≥ 1024px</li>
+            <li>• Refresh the web page</li>
           </ul>
         </div>
       </div>

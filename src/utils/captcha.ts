@@ -1,4 +1,4 @@
-export const generateCaptcha = (length: number = 6): string => {
+export const generateCaptcha = (length: number = 3): string => {
   const characters = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let result = '';
   for (let i = 0; i < length; i++) {

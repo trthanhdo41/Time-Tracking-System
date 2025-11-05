@@ -13,7 +13,7 @@ export const formatTime = (timestamp: number | any): string => {
   
   const date = new Date(ts);
   if (isNaN(date.getTime())) return 'Invalid Time';
-  return date.toLocaleTimeString('vi-VN', {
+  return date.toLocaleTimeString('en-US', {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
@@ -35,7 +35,7 @@ export const formatDate = (timestamp: number | any): string => {
   
   const date = new Date(ts);
   if (isNaN(date.getTime())) return 'Invalid Date';
-  return date.toLocaleDateString('vi-VN', {
+  return date.toLocaleDateString('en-US', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -43,7 +43,7 @@ export const formatDate = (timestamp: number | any): string => {
 };
 
 export const formatDateTime = (timestamp: number): string => {
-  return new Date(timestamp).toLocaleString('vi-VN', {
+  return new Date(timestamp).toLocaleString('en-US', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -90,7 +90,7 @@ export const getServerTimestamp = (): number => {
 
 export const getVietnamTimeString = (timestamp?: number): string => {
   const time = timestamp ? new Date(timestamp) : new Date();
-  return time.toLocaleString('vi-VN', {
+  return time.toLocaleString('en-US', {
     timeZone: 'Asia/Ho_Chi_Minh',
     year: 'numeric',
     month: '2-digit',

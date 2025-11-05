@@ -46,7 +46,7 @@ export const ErrorReportsManager: React.FC = () => {
         setReports(reportsData);
       } catch (error: any) {
         console.error('Error loading error reports:', error);
-        toast.error('Không thể tải báo cáo lỗi');
+        toast.error('Unable to load error reports');
       } finally {
         setLoading(false);
       }
@@ -56,7 +56,7 @@ export const ErrorReportsManager: React.FC = () => {
   }, [user]);
 
   const formatDate = (timestamp: number): string => {
-    return new Date(timestamp).toLocaleString('vi-VN', {
+    return new Date(timestamp).toLocaleString('en-US', {
       timeZone: 'Asia/Ho_Chi_Minh',
       day: '2-digit',
       month: '2-digit',
@@ -74,20 +74,20 @@ export const ErrorReportsManager: React.FC = () => {
         resolvedAt: Date.now()
       });
       setReports(reports.map(r => r.id === reportId ? { ...r, status: 'resolved' } : r));
-      toast.success('Đã đánh dấu là đã xử lý');
+      toast.success('Marked as resolved');
     } catch (error: any) {
-      toast.error('Không thể cập nhật trạng thái');
+      toast.error('Unable to update status');
     }
   };
 
   if (loading) {
     return (
       <Card>
-        <CardHeader title="Báo Cáo Lỗi" icon={<XIcon />} />
+        <CardHeader title="Error Reports" icon={<XIcon />} />
         <div className="p-6">
           <div className="text-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500 mx-auto mb-4"></div>
-            <p className="text-gray-400">Đang tải...</p>
+            <p className="text-gray-400">Loading...</p>
           </div>
         </div>
       </Card>
@@ -99,44 +99,44 @@ export const ErrorReportsManager: React.FC = () => {
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
-          <CardHeader title="Tổng Báo Cáo" icon={<XIcon />} />
+          <CardHeader title="Total Reports" icon={<XIcon />} />
           <div className="p-6">
             <div className="text-3xl font-bold text-primary-400 mb-2">
               {reports.length}
             </div>
-            <p className="text-sm text-gray-400">Tổng số báo cáo lỗi</p>
+            <p className="text-sm text-gray-400">Total error reports</p>
           </div>
         </Card>
 
         <Card>
-          <CardHeader title="Chờ Xử Lý" icon={<XIcon />} />
+          <CardHeader title="Pending" icon={<XIcon />} />
           <div className="p-6">
             <div className="text-3xl font-bold text-yellow-400 mb-2">
               {reports.filter(r => r.status === 'pending').length}
             </div>
-            <p className="text-sm text-gray-400">Báo cáo chưa xử lý</p>
+            <p className="text-sm text-gray-400">Unresolved reports</p>
           </div>
         </Card>
 
         <Card>
-          <CardHeader title="Đã Xử Lý" icon={<XIcon />} />
+          <CardHeader title="Resolved" icon={<XIcon />} />
           <div className="p-6">
             <div className="text-3xl font-bold text-green-400 mb-2">
               {reports.filter(r => r.status === 'resolved').length}
             </div>
-            <p className="text-sm text-gray-400">Báo cáo đã xử lý</p>
+            <p className="text-sm text-gray-400">Resolved reports</p>
           </div>
         </Card>
       </div>
 
       {/* Reports List */}
               <Card>
-          <CardHeader title="Danh Sách Báo Cáo Lỗi" icon={<XIcon />} />
+          <CardHeader title="Error Reports List" icon={<XIcon />} />
         <div className="p-6">
           {reports.length === 0 ? (
             <div className="text-center py-8">
               <XIcon className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-              <p className="text-gray-400">Không có báo cáo lỗi nào</p>
+              <p className="text-gray-400">No error reports</p>
             </div>
           ) : (
             <div className="space-y-4 max-h-[600px] overflow-y-auto">
@@ -176,9 +176,9 @@ export const ErrorReportsManager: React.FC = () => {
                         <p className="text-white mb-2">{report.description}</p>
                         
                         <div className="flex items-center gap-4 text-sm text-gray-400">
-                          <span><strong>Loại:</strong> {report.type}</span>
-                          <span><strong>Số lần thử:</strong> {report.attempts}</span>
-                          <span><strong>Thời gian:</strong> {formatDate(report.timestamp)}</span>
+                          <span><strong>Type:</strong> {report.type}</span>
+                          <span><strong>Attempts:</strong> {report.attempts}</span>
+                          <span><strong>Time:</strong> {formatDate(report.timestamp)}</span>
                         </div>
                       </div>
                     </div>
@@ -191,7 +191,7 @@ export const ErrorReportsManager: React.FC = () => {
                           size="sm"
                           onClick={() => handleResolve(report.id)}
                         >
-                          Đã Xử Lý
+                          Mark Resolved
                         </Button>
                       )}
                     </div>

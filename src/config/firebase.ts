@@ -13,6 +13,25 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
+// Debug: Log env check (only in development)
+if (import.meta.env.DEV) {
+  console.log('🔍 Firebase ENV Check:', {
+    hasApiKey: !!firebaseConfig.apiKey,
+    hasAuthDomain: !!firebaseConfig.authDomain,
+    hasProjectId: !!firebaseConfig.projectId,
+    projectId: firebaseConfig.projectId
+  });
+}
+
+// Validate required fields
+if (!firebaseConfig.apiKey || !firebaseConfig.authDomain || !firebaseConfig.projectId) {
+  console.error('❌ Firebase Config Missing! Check environment variables:', {
+    apiKey: firebaseConfig.apiKey ? 'OK' : 'MISSING',
+    authDomain: firebaseConfig.authDomain ? 'OK' : 'MISSING',
+    projectId: firebaseConfig.projectId ? 'OK' : 'MISSING',
+  });
+}
+
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 

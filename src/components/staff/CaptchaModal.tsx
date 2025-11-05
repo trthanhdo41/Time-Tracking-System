@@ -73,7 +73,7 @@ export const CaptchaModal: React.FC<CaptchaModalProps> = ({
   }, [isOpen, settings]);
 
   const generateNewCaptcha = () => {
-    const code = generateCaptcha(6);
+    const code = generateCaptcha(3);
     setCaptchaCode(code);
     setCaptchaImage(getCaptchaImageUrl(code));
     setUserInput('');
@@ -89,7 +89,7 @@ export const CaptchaModal: React.FC<CaptchaModalProps> = ({
         console.error('Auto checkout error:', error);
       }
     }
-    toast.error('Hết thời gian! Bạn đã bị Check Out.');
+    toast.error('Time expired! You have been checked out.');
     soundManager.playError();
     onFail();
   };
@@ -123,12 +123,12 @@ export const CaptchaModal: React.FC<CaptchaModalProps> = ({
         useSessionStore.getState().setSession(null);
     useSessionStore.getState().setStatus('offline');
         
-        toast.error(`Sai ${maxAttempts} lần! Bạn đã bị Check Out.`);
+        toast.error(`${maxAttempts} incorrect attempts! You have been checked out.`);
         soundManager.playError();
         setLoading(false);
         onFail();
       } else {
-        toast.error(`Sai! Còn ${maxAttempts - newAttempts} lần thử.`);
+        toast.error(`Incorrect! ${maxAttempts - newAttempts} attempts remaining.`);
         soundManager.playWarning();
         generateNewCaptcha();
         setLoading(false);
@@ -146,7 +146,7 @@ export const CaptchaModal: React.FC<CaptchaModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={() => {}}
-      title="Xác Thực CAPTCHA"
+      title="CAPTCHA Verification"
       showClose={false}
       size="md"
     >
@@ -164,7 +164,7 @@ export const CaptchaModal: React.FC<CaptchaModalProps> = ({
           >
             {formatTime(timeLeft)}
           </motion.div>
-          <p className="text-sm text-gray-400 mt-2">Thời gian còn lại</p>
+          <p className="text-sm text-gray-400 mt-2">Time Remaining</p>
         </div>
 
         {/* Captcha Image */}
@@ -202,7 +202,7 @@ export const CaptchaModal: React.FC<CaptchaModalProps> = ({
             type="text"
             value={userInput}
             onChange={(e) => setUserInput(e.target.value.toUpperCase())}
-            placeholder="Nhập mã CAPTCHA"
+            placeholder="Enter CAPTCHA code"
             autoFocus
             className="text-center text-2xl tracking-widest uppercase"
             disabled={loading}
@@ -216,7 +216,7 @@ export const CaptchaModal: React.FC<CaptchaModalProps> = ({
               disabled={loading}
               className="flex-1"
             >
-              Tạo Mới
+              New Code
             </Button>
             <Button
               type="submit"
@@ -224,7 +224,7 @@ export const CaptchaModal: React.FC<CaptchaModalProps> = ({
               loading={loading}
               className="flex-1"
             >
-              Xác Nhận
+              Confirm
             </Button>
           </div>
         </form>
@@ -236,7 +236,7 @@ export const CaptchaModal: React.FC<CaptchaModalProps> = ({
           className="glass-strong p-4 rounded-xl text-center"
         >
           <p className="text-sm text-yellow-400">
-            ⚠️ Nhập sai {settings?.captcha.maxAttempts || 3} lần hoặc hết thời gian sẽ tự động Check Out
+            ⚠️ {settings?.captcha.maxAttempts || 3} incorrect attempts or timeout will automatically Check Out
           </p>
         </motion.div>
       </div>

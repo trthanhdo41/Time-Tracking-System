@@ -19,10 +19,10 @@ export const DataCleanupManager: React.FC = () => {
       
       if (cleanupType === 'all') {
         deletedCount = await clearAllTestData();
-        toast.success(`Đã xóa ${deletedCount} documents từ tất cả collections!`);
+        toast.success(`Deleted ${deletedCount} documents from all collections!`);
       } else {
         deletedCount = await clearActivityAndImages();
-        toast.success(`Đã xóa ${deletedCount} documents từ activity logs và images!`);
+        toast.success(`Deleted ${deletedCount} documents from activity logs and images!`);
       }
       
       setShowConfirmModal(false);
@@ -34,7 +34,7 @@ export const DataCleanupManager: React.FC = () => {
       
     } catch (error: any) {
       console.error('Error clearing data:', error);
-      toast.error(`Lỗi khi xóa dữ liệu: ${error.message}`);
+      toast.error(`Error deleting data: ${error.message}`);
     } finally {
       setIsClearing(false);
     }
@@ -42,7 +42,7 @@ export const DataCleanupManager: React.FC = () => {
 
   return (
     <Card>
-      <CardHeader title="Dọn Dẹp Dữ Liệu Test" icon={<TrashIcon />} />
+      <CardHeader title="Test Data Cleanup" icon={<TrashIcon />} />
       <div className="p-6">
         <div className="space-y-6">
           {/* Warning */}
@@ -50,9 +50,9 @@ export const DataCleanupManager: React.FC = () => {
             <div className="flex items-center gap-3">
               <XIcon className="w-6 h-6 text-red-400" />
               <div>
-                <h3 className="text-red-400 font-medium">Cảnh báo!</h3>
+                <h3 className="text-red-400 font-medium">Warning!</h3>
                 <p className="text-red-300 text-sm mt-1">
-                  Hành động này sẽ xóa VĨNH VIỄN tất cả dữ liệu test. Không thể hoàn tác!
+                  This action will PERMANENTLY delete all test data. Cannot be undone!
                 </p>
               </div>
             </div>
@@ -60,7 +60,7 @@ export const DataCleanupManager: React.FC = () => {
 
           {/* Clear Options */}
           <div className="space-y-4">
-            <h3 className="text-white font-medium">Chọn loại dữ liệu cần xóa:</h3>
+            <h3 className="text-white font-medium">Select data type to delete:</h3>
             
             <div className="space-y-3">
               <label className="flex items-center gap-3 cursor-pointer">
@@ -73,9 +73,9 @@ export const DataCleanupManager: React.FC = () => {
                   className="text-primary-500"
                 />
                 <div>
-                  <p className="text-white font-medium">Xóa Activity Logs & Images</p>
+                  <p className="text-white font-medium">Delete Activity Logs & Images</p>
                   <p className="text-gray-400 text-sm">
-                    Xóa: Activity logs, Sessions, Face verifications, Image delete requests
+                    Delete: Activity logs, Sessions, Face verifications, Image delete requests
                   </p>
                 </div>
               </label>
@@ -90,9 +90,9 @@ export const DataCleanupManager: React.FC = () => {
                   className="text-primary-500"
                 />
                 <div>
-                  <p className="text-white font-medium">Xóa Tất Cả Dữ Liệu Test</p>
+                  <p className="text-white font-medium">Delete All Test Data</p>
                   <p className="text-gray-400 text-sm">
-                    Xóa: Activity logs, Sessions, History, Face verifications, Image delete requests, Notifications, Error reports
+                    Delete: Activity logs, Sessions, History, Face verifications, Image delete requests, Notifications, Error reports, Password reset requests, Terms and Conditions
                   </p>
                 </div>
               </label>
@@ -107,7 +107,7 @@ export const DataCleanupManager: React.FC = () => {
               onClick={() => setShowConfirmModal(true)}
               disabled={isClearing}
             >
-              {isClearing ? 'Đang xóa...' : 'Xóa Dữ Liệu'}
+              {isClearing ? 'Deleting...' : 'Delete Data'}
             </Button>
           </div>
         </div>
@@ -117,17 +117,17 @@ export const DataCleanupManager: React.FC = () => {
       <Modal
         isOpen={showConfirmModal}
         onClose={() => setShowConfirmModal(false)}
-        title="Xác Nhận Xóa Dữ Liệu"
+        title="Confirm Data Deletion"
         size="md"
       >
         <div className="p-6">
           <div className="text-center">
             <XIcon className="w-16 h-16 text-red-400 mx-auto mb-4" />
             <h3 className="text-xl font-bold text-white mb-2">
-              Bạn có chắc chắn muốn xóa?
+              Are you sure you want to delete?
             </h3>
             <p className="text-gray-400 mb-6">
-              Hành động này sẽ xóa <strong>VĨNH VIỄN</strong> tất cả dữ liệu test và không thể hoàn tác!
+              This action will <strong>PERMANENTLY</strong> delete all test data and cannot be undone!
             </p>
             
             <div className="flex gap-3 justify-center">
@@ -136,7 +136,7 @@ export const DataCleanupManager: React.FC = () => {
                 onClick={() => setShowConfirmModal(false)}
                 disabled={isClearing}
               >
-                Hủy
+                Cancel
               </Button>
               <Button
                 variant="danger"
@@ -144,7 +144,7 @@ export const DataCleanupManager: React.FC = () => {
                 onClick={handleClearData}
                 disabled={isClearing}
               >
-                {isClearing ? 'Đang xóa...' : 'Xóa Vĩnh Viễn'}
+                {isClearing ? 'Deleting...' : 'Delete Permanently'}
               </Button>
             </div>
           </div>

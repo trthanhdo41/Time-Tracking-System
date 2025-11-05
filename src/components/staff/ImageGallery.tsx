@@ -82,7 +82,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({ userId }) => {
       setImages(fetchedImages);
     } catch (error) {
       console.error('Error loading images:', error);
-      toast.error('Không thể tải danh sách ảnh');
+      toast.error('Unable to load image list');
       setImages([]); // Set empty array on error
     } finally {
       setLoading(false);
@@ -106,13 +106,13 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({ userId }) => {
   const getImageTypeLabel = (type: string) => {
     switch (type) {
       case 'check_in':
-        return 'Ảnh Check In';
+        return 'Check In Image';
       case 'face_verify':
-        return 'Ảnh Xác Thực';
+        return 'Verification Image';
       case 'check_out':
-        return 'Ảnh Check Out';
+        return 'Check Out Image';
       default:
-        return 'Ảnh Khác';
+        return 'Other Image';
     }
   };
 
@@ -135,11 +135,11 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({ userId }) => {
     
     switch (request.status) {
       case 'pending':
-        return { status: 'pending', text: 'Đang chờ phê duyệt', color: 'text-yellow-400' };
+        return { status: 'pending', text: 'Pending Approval', color: 'text-yellow-400' };
       case 'approved':
-        return { status: 'approved', text: 'Đã được phê duyệt', color: 'text-green-400' };
+        return { status: 'approved', text: 'Approved', color: 'text-green-400' };
       case 'rejected':
-        return { status: 'rejected', text: 'Bị từ chối', color: 'text-red-400' };
+        return { status: 'rejected', text: 'Rejected', color: 'text-red-400' };
       default:
         return null;
     }
@@ -152,14 +152,14 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({ userId }) => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    toast.success('Đã tải xuống ảnh');
+    toast.success('Image downloaded');
   };
 
   if (loading) {
     return (
       <div className="text-center py-8">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4"></div>
-        <p className="text-gray-400">Đang tải danh sách ảnh...</p>
+        <p className="text-gray-400">Loading images...</p>
       </div>
     );
   }
@@ -168,9 +168,9 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({ userId }) => {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <h3 className="text-xl font-semibold text-white">Thư Viện Ảnh</h3>
+          <h3 className="text-xl font-semibold text-white">Image Gallery</h3>
           <p className="text-gray-400">
-            Tổng cộng {images.length} ảnh đã được chụp
+            Total {images.length} images captured
           </p>
         </CardHeader>
         
@@ -178,7 +178,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({ userId }) => {
           {images.length === 0 ? (
             <div className="text-center py-8">
               <div className="text-gray-400 mb-4">📷</div>
-              <p className="text-gray-400">Chưa có ảnh nào được chụp</p>
+              <p className="text-gray-400">No images captured yet</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -225,7 +225,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({ userId }) => {
                           className="flex-1"
                         >
                           <EyeIcon className="w-4 h-4 mr-1" />
-                          Xem
+                          View
                         </Button>
                         
                         <Button
@@ -235,7 +235,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({ userId }) => {
                           className="flex-1"
                         >
                           <DownloadIcon className="w-4 h-4 mr-1" />
-                          Tải
+                          Download
                         </Button>
                         
                         <Button
@@ -246,7 +246,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({ userId }) => {
                           className="flex-1 text-red-400 border-red-400 hover:bg-red-400/10"
                         >
                           <TrashIcon className="w-4 h-4 mr-1" />
-                          Xóa
+                          Delete
                         </Button>
                       </div>
                     </div>
@@ -276,11 +276,11 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({ userId }) => {
             
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <span className="text-gray-400">Loại ảnh:</span>
+                <span className="text-gray-400">Image Type:</span>
                 <span className="text-white ml-2">{getImageTypeLabel(selectedImage.type)}</span>
               </div>
               <div>
-                <span className="text-gray-400">Thời gian:</span>
+                <span className="text-gray-400">Time:</span>
                 <span className="text-white ml-2">
                   {formatDate(selectedImage.timestamp)} {formatTime(selectedImage.timestamp)}
                 </span>
@@ -293,7 +293,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({ userId }) => {
                 onClick={() => setSelectedImage(null)}
                 className="flex-1"
               >
-                Đóng
+                Close
               </Button>
               <Button
                 onClick={() => {
@@ -303,7 +303,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({ userId }) => {
                 className="flex-1"
               >
                 <DownloadIcon className="w-4 h-4 mr-2" />
-                Tải Xuống
+                Download
               </Button>
             </div>
           </div>

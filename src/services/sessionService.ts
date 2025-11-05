@@ -88,7 +88,7 @@ export const createCheckInSession = async (
     return newSession;
   } catch (error) {
     console.error('Error creating check-in session:', error);
-    throw new Error('Không thể tạo phiên check-in');
+    throw new Error('Unable to create check-in session');
   }
 };
 
@@ -102,6 +102,7 @@ export const updateSessionBackSoon = async (
 ): Promise<void> => {
   try {
     const sessionRef = doc(db, 'sessions', sessionId);
+    const userRef = doc(db, 'users', user.id);
     const now = Date.now();
 
     await updateDoc(sessionRef, {
@@ -111,6 +112,12 @@ export const updateSessionBackSoon = async (
         reason,
       }],
       updatedAt: now,
+    });
+
+    // Update user status to back_soon
+    await updateDoc(userRef, {
+      status: 'back_soon',
+      lastActivityAt: now,
     });
 
     // Log activity
@@ -128,7 +135,7 @@ export const updateSessionBackSoon = async (
     );
   } catch (error) {
     console.error('Error updating session to back soon:', error);
-    throw new Error('Không thể cập nhật trạng thái Back Soon');
+    throw new Error('Unable to update Back Soon status');
   }
 };
 
@@ -141,6 +148,7 @@ export const updateSessionBackOnline = async (
 ): Promise<void> => {
   try {
     const sessionRef = doc(db, 'sessions', sessionId);
+    const userRef = doc(db, 'users', user.id);
     const now = Date.now();
     
     const backSoonEvents = await getBackSoonEvents(sessionId);
@@ -162,6 +170,12 @@ export const updateSessionBackOnline = async (
       updatedAt: now,
     });
 
+    // Update user status back to online
+    await updateDoc(userRef, {
+      status: 'online',
+      lastActivityAt: now,
+    });
+
     // Log activity
     await logActivity(
       user.id,
@@ -177,7 +191,7 @@ export const updateSessionBackOnline = async (
     );
   } catch (error) {
     console.error('Error updating session back online:', error);
-    throw new Error('Không thể cập nhật trạng thái Online');
+    throw new Error('Unable to update Online status');
   }
 };
 
@@ -253,7 +267,57 @@ export const checkOutSession = async (
     );
   } catch (error) {
     console.error('Error checking out session:', error);
-    throw new Error('Không thể check out');
+    throw new Error('Unable to check out');
+  }
+};
+
+/**
+ * Admin force logout user (checkout their active session)
+ */
+export const adminForceLogoutUser = async (
+  userId: string,
+  adminUser: User,
+  reason: string = 'Forced logout by admin'
+): Promise<void> => {
+  try {
+    // Get current active session for user
+    const activeSession = await getCurrentSession(userId);
+    
+    if (!activeSession || activeSession.status !== 'online') {
+      // User doesn't have an active session, just update their status
+      const userRef = doc(db, 'users', userId);
+      await updateDoc(userRef, {
+        status: 'offline',
+        lastLogoutAt: Date.now()
+      });
+      return;
+    }
+    
+    // Checkout the active session
+    const userDoc = await getDoc(doc(db, 'users', userId));
+    if (!userDoc.exists()) {
+      throw new Error('User not found');
+    }
+    
+    const targetUser = userDoc.data() as User;
+    await checkOutSession(activeSession.id, reason, targetUser);
+    
+    // Log admin action
+    await logActivity(
+      adminUser.id,
+      adminUser.username,
+      adminUser.role,
+      adminUser.department,
+      adminUser.position,
+      'admin_action',
+      `Admin forced logout for user: ${targetUser.username} - Reason: ${reason}`,
+      adminUser.id,
+      adminUser.role,
+      adminUser.department
+    );
+  } catch (error) {
+    console.error('Error forcing user logout:', error);
+    throw new Error('Unable to force logout user');
   }
 };
 
@@ -301,15 +365,35 @@ export const getUserSessionHistory = async (
     );
     
     const snapshot = await getDocs(q);
-    let sessions = snapshot.docs.map(doc => doc.data() as Session);
+    let sessions = snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        ...data,
+        id: doc.id,
+        checkInTime: data.checkInTime instanceof Timestamp ? data.checkInTime.toMillis() : (typeof data.checkInTime === 'number' ? data.checkInTime : Date.now()),
+        checkOutTime: data.checkOutTime instanceof Timestamp ? data.checkOutTime?.toMillis() : (typeof data.checkOutTime === 'number' ? data.checkOutTime : undefined),
+        lastActivityTime: data.lastActivityTime instanceof Timestamp ? data.lastActivityTime.toMillis() : (typeof data.lastActivityTime === 'number' ? data.lastActivityTime : Date.now()),
+        lastCaptchaTime: data.lastCaptchaTime instanceof Timestamp ? data.lastCaptchaTime?.toMillis() : (typeof data.lastCaptchaTime === 'number' ? data.lastCaptchaTime : undefined),
+      } as Session;
+    });
     
     // Filter by date range if provided
     if (startDate || endDate) {
+      const beforeFilter = sessions.length;
       sessions = sessions.filter(session => {
-        if (startDate && session.checkInTime < startDate) return false;
-        if (endDate && session.checkInTime > endDate) return false;
+        // checkInTime is already converted to number above
+        const checkInTime = typeof session.checkInTime === 'number' ? session.checkInTime : Date.now();
+        
+        // Filter: startDate <= checkInTime <= endDate
+        if (startDate && checkInTime < startDate) {
+          return false;
+        }
+        if (endDate && checkInTime > endDate) {
+          return false;
+        }
         return true;
       });
+      console.log(`Filtered sessions in getAllSessionsHistory: ${beforeFilter} -> ${sessions.length} (startDate: ${startDate ? new Date(startDate).toISOString() : 'none'}, endDate: ${endDate ? new Date(endDate).toISOString() : 'none'})`);
     }
     
     // Sort by checkInTime descending (newest first) on client-side
@@ -318,7 +402,61 @@ export const getUserSessionHistory = async (
     return sessions;
   } catch (error) {
     console.error('Error getting session history:', error);
-    throw new Error('Không thể tải lịch sử');
+    throw new Error('Unable to load history');
+  }
+};
+
+/**
+ * Get all sessions history (for admin)
+ */
+export const getAllSessionsHistory = async (
+  startDate?: number,
+  endDate?: number
+): Promise<Session[]> => {
+  try {
+    const sessionsRef = collection(db, 'sessions');
+    // Query all sessions without userId filter
+    const q = query(sessionsRef);
+    
+    const snapshot = await getDocs(q);
+    let sessions = snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        ...data,
+        id: doc.id,
+        checkInTime: data.checkInTime instanceof Timestamp ? data.checkInTime.toMillis() : data.checkInTime,
+        checkOutTime: data.checkOutTime instanceof Timestamp ? data.checkOutTime?.toMillis() : data.checkOutTime,
+        lastActivityTime: data.lastActivityTime instanceof Timestamp ? data.lastActivityTime.toMillis() : data.lastActivityTime,
+        lastCaptchaTime: data.lastCaptchaTime instanceof Timestamp ? data.lastCaptchaTime?.toMillis() : data.lastCaptchaTime,
+      } as Session;
+    });
+    
+    // Filter by date range if provided
+    if (startDate || endDate) {
+      const beforeFilter = sessions.length;
+      sessions = sessions.filter(session => {
+        // checkInTime is already converted to number above
+        const checkInTime = typeof session.checkInTime === 'number' ? session.checkInTime : Date.now();
+        
+        // Filter: startDate <= checkInTime <= endDate
+        if (startDate && checkInTime < startDate) {
+          return false;
+        }
+        if (endDate && checkInTime > endDate) {
+          return false;
+        }
+        return true;
+      });
+      console.log(`Filtered sessions in getAllSessionsHistory: ${beforeFilter} -> ${sessions.length} (startDate: ${startDate ? new Date(startDate).toISOString() : 'none'}, endDate: ${endDate ? new Date(endDate).toISOString() : 'none'})`);
+    }
+    
+    // Sort by checkInTime descending (newest first) on client-side
+    sessions.sort((a, b) => b.checkInTime - a.checkInTime);
+    
+    return sessions;
+  } catch (error) {
+    console.error('Error getting all sessions history:', error);
+    throw new Error('Unable to load all history');
   }
 };
 
@@ -415,7 +553,7 @@ export const updateCaptchaAttempt = async (
     }
   } catch (error) {
     console.error('Error updating CAPTCHA attempt:', error);
-    throw new Error('Không thể cập nhật CAPTCHA');
+    throw new Error('Unable to update CAPTCHA');
   }
 };
 

@@ -9,7 +9,7 @@ import toast from 'react-hot-toast';
 interface BackSoonModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (reason: 'meeting' | 'wc' | 'other', customReason?: string) => void;
+  onSubmit: (reason: 'meeting' | 'toilet' | 'other', customReason?: string) => void;
 }
 
 export const BackSoonModal: React.FC<BackSoonModalProps> = ({
@@ -17,7 +17,7 @@ export const BackSoonModal: React.FC<BackSoonModalProps> = ({
   onClose,
   onSubmit,
 }) => {
-  const [selectedReason, setSelectedReason] = useState<'meeting' | 'wc' | 'other'>('meeting');
+  const [selectedReason, setSelectedReason] = useState<'meeting' | 'toilet' | 'other'>('meeting');
   const [customReason, setCustomReason] = useState('');
 
   const reasons = [
@@ -32,8 +32,8 @@ export const BackSoonModal: React.FC<BackSoonModalProps> = ({
       color: 'blue'
     },
     { 
-      value: 'wc' as const, 
-      label: 'WC', 
+      value: 'toilet' as const, 
+      label: 'Toilet', 
       icon: (
         <svg className="w-12 h-12" viewBox="0 0 24 24" fill="none" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7v10M8 7a2 2 0 110-4 2 2 0 010 4zm0 10a2 2 0 110 4 2 2 0 010-4zm8-10v10m0-10a2 2 0 100-4 2 2 0 000 4zm0 10a2 2 0 100 4 2 2 0 000-4z" />
@@ -45,7 +45,7 @@ export const BackSoonModal: React.FC<BackSoonModalProps> = ({
     },
     { 
       value: 'other' as const, 
-      label: 'Khác', 
+      label: 'Other', 
       icon: (
         <svg className="w-12 h-12" viewBox="0 0 24 24" fill="none" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
@@ -57,7 +57,7 @@ export const BackSoonModal: React.FC<BackSoonModalProps> = ({
 
   const handleSubmit = () => {
     if (selectedReason === 'other' && !customReason.trim()) {
-      toast.error('Vui lòng nhập lý do');
+      toast.error('Please enter a reason');
       return;
     }
 
@@ -75,7 +75,7 @@ export const BackSoonModal: React.FC<BackSoonModalProps> = ({
     >
       <div className="space-y-6">
         <p className="text-gray-400 text-center">
-          Chọn lý do tạm thời rời khỏi
+          Select reason for temporary leave
         </p>
 
         {/* Reason Selection */}
@@ -108,10 +108,10 @@ export const BackSoonModal: React.FC<BackSoonModalProps> = ({
             exit={{ opacity: 0, height: 0 }}
           >
             <Input
-              label="Lý do cụ thể"
+              label="Specific Reason"
               value={customReason}
               onChange={(e) => setCustomReason(e.target.value)}
-              placeholder="Nhập lý do của bạn..."
+              placeholder="Enter your reason..."
               autoFocus
             />
           </motion.div>
@@ -124,7 +124,7 @@ export const BackSoonModal: React.FC<BackSoonModalProps> = ({
               <circle cx="12" cy="12" r="10" strokeWidth={2}/>
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 16v-4m0-4h.01"/>
             </svg>
-            <span>Thời gian Back Soon sẽ được tính riêng và không yêu cầu CAPTCHA</span>
+            <span>Back Soon time is tracked separately and does not require CAPTCHA</span>
           </div>
         </div>
 
@@ -135,7 +135,7 @@ export const BackSoonModal: React.FC<BackSoonModalProps> = ({
             onClick={onClose}
             className="flex-1"
           >
-            Hủy
+            Cancel
           </Button>
           <Button
             variant="primary"
@@ -143,7 +143,7 @@ export const BackSoonModal: React.FC<BackSoonModalProps> = ({
             onClick={handleSubmit}
             className="flex-1"
           >
-            Xác Nhận
+            Confirm
           </Button>
         </div>
       </div>

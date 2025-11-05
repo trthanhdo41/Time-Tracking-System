@@ -11,6 +11,19 @@ export interface SystemSettings {
     captchaCountBeforeFace: number;
     similarityThreshold: number;
   };
+  antiSpoofing: {
+    enabled: boolean;
+    confidenceThreshold: number; // 0-1, default 0.55
+    sharpnessMin: number; // default 150
+    contrastMin: number; // default 40
+    colorfulnessMin: number; // default 30
+    textureScoreMax: number; // default 0.15
+  };
+  motionDetection: {
+    enabled: boolean;
+    motionMin: number; // default 2.0
+    motionMax: number; // default 8.0
+  };
   general: {
     autoLogoutEnabled: boolean;
     sessionTimeoutHours: number;
@@ -30,7 +43,20 @@ export const getDefaultSettings = (): SystemSettings => ({
   },
   faceVerification: {
     captchaCountBeforeFace: parseInt(import.meta.env.VITE_CAPTCHA_COUNT_BEFORE_FACE || '3'),
-    similarityThreshold: parseFloat(import.meta.env.VITE_FACE_VERIFICATION_SIMILARITY_THRESHOLD || '0.6'),
+    similarityThreshold: parseFloat(import.meta.env.VITE_FACE_VERIFICATION_SIMILARITY_THRESHOLD || '0.7'),
+  },
+  antiSpoofing: {
+    enabled: true,
+    confidenceThreshold: 0.55,
+    sharpnessMin: 150,
+    contrastMin: 40,
+    colorfulnessMin: 30,
+    textureScoreMax: 0.15,
+  },
+  motionDetection: {
+    enabled: true,
+    motionMin: 2.0,
+    motionMax: 8.0,
   },
   general: {
     autoLogoutEnabled: true,

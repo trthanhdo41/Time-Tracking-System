@@ -123,7 +123,7 @@ export const AllImagesManager: React.FC = () => {
       setImages(allImages);
     } catch (error) {
       console.error('Error loading images:', error);
-      toast.error('Không thể tải danh sách ảnh');
+      toast.error('Unable to load image list');
     } finally {
       setLoading(false);
     }
@@ -173,7 +173,7 @@ export const AllImagesManager: React.FC = () => {
   if (loading) {
     return (
       <Card>
-        <CardHeader title="Tất Cả Ảnh Check-in" icon={<ImageIcon />} />
+        <CardHeader title="All Check-in Images" icon={<ImageIcon />} />
         <div className="p-6">
           <div className="flex items-center justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
@@ -185,7 +185,7 @@ export const AllImagesManager: React.FC = () => {
 
   return (
     <Card>
-      <CardHeader title="Tất Cả Ảnh Check-in" icon={<ImageIcon />} />
+      <CardHeader title="All Check-in Images" icon={<ImageIcon />} />
       <div className="p-6">
         {/* Filters */}
         <div className="flex flex-wrap gap-4 mb-6">
@@ -194,7 +194,7 @@ export const AllImagesManager: React.FC = () => {
               <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <Input
                 type="text"
-                placeholder="Tìm kiếm theo tên hoặc phòng ban..."
+                placeholder="Search by name or department..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -208,7 +208,7 @@ export const AllImagesManager: React.FC = () => {
               onChange={(e) => setFilterUser(e.target.value)}
               className="input-field w-full"
             >
-              <option value="">Tất cả nhân viên</option>
+              <option value="">All Employees</option>
               {users.map(user => (
                 <option key={user.id} value={user.id}>
                   {user.username}
@@ -223,7 +223,7 @@ export const AllImagesManager: React.FC = () => {
               onChange={(e) => setFilterType(e.target.value)}
               className="input-field w-full"
             >
-              <option value="">Tất cả loại</option>
+              <option value="">All Types</option>
               <option value="check_in">Check In</option>
               <option value="face_verify">Face Verify</option>
               <option value="check_out">Check Out</option>
@@ -235,7 +235,7 @@ export const AllImagesManager: React.FC = () => {
         {filteredImages.length === 0 ? (
           <div className="text-center py-12">
             <ImageIcon className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-            <p className="text-gray-400">Không có ảnh nào</p>
+            <p className="text-gray-400">No images</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -312,19 +312,19 @@ export const AllImagesManager: React.FC = () => {
             
             <div className="mt-6 grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Nhân viên</label>
+                <label className="block text-sm text-gray-400 mb-1">Employee</label>
                 <p className="text-white">{selectedImage.username || 'N/A'}</p>
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Phòng ban</label>
+                <label className="block text-sm text-gray-400 mb-1">Department</label>
                 <p className="text-white">{selectedImage.department || 'N/A'}</p>
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Loại ảnh</label>
+                <label className="block text-sm text-gray-400 mb-1">Image Type</label>
                 <p className="text-white">{getTypeLabel(selectedImage.type)}</p>
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Thời gian</label>
+                <label className="block text-sm text-gray-400 mb-1">Time</label>
                 <p className="text-white">
                   {formatDate(selectedImage.timestamp)} {formatTime(selectedImage.timestamp)}
                 </p>
@@ -337,7 +337,7 @@ export const AllImagesManager: React.FC = () => {
                 icon={<DownloadIcon />}
                 onClick={() => handleDownload(selectedImage)}
               >
-                Tải xuống
+                Download
               </Button>
             </div>
           </div>

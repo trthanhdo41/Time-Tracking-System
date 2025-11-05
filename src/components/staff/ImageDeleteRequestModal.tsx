@@ -26,7 +26,7 @@ export const ImageDeleteRequestModal: React.FC<ImageDeleteRequestModalProps> = (
 
   const handleSubmit = async () => {
     if (!user || !reason.trim()) {
-      toast.error('Vui lòng nhập lý do xóa ảnh');
+      toast.error('Please enter reason for deletion');
       return;
     }
 
@@ -43,15 +43,15 @@ export const ImageDeleteRequestModal: React.FC<ImageDeleteRequestModalProps> = (
   };
 
   const predefinedReasons = [
-    'Ảnh bị mờ, không rõ nét',
-    'Ảnh bị lỗi kỹ thuật',
-    'Ảnh không phù hợp',
-    'Ảnh bị trùng lặp',
-    'Lý do khác'
+    'Image is blurry or unclear',
+    'Technical error',
+    'Inappropriate image',
+    'Duplicate image',
+    'Other reason'
   ];
 
   const handlePredefinedReason = (selectedReason: string) => {
-    if (selectedReason === 'Lý do khác') {
+    if (selectedReason === 'Other reason') {
       setReason('');
     } else {
       setReason(selectedReason);
@@ -59,9 +59,9 @@ export const ImageDeleteRequestModal: React.FC<ImageDeleteRequestModalProps> = (
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Yêu Cầu Xóa Ảnh" size="lg">
+    <Modal isOpen={isOpen} onClose={onClose} title="Request Image Deletion" size="lg">
       <div className="grid grid-cols-2 gap-6">
-        {/* Cột trái - Ảnh */}
+        {/* Left Column - Image */}
         <div className="flex flex-col items-center">
           <div className="w-full aspect-square bg-gray-800 rounded-lg overflow-hidden mb-4">
             <img
@@ -71,7 +71,7 @@ export const ImageDeleteRequestModal: React.FC<ImageDeleteRequestModalProps> = (
             />
           </div>
           <p className="text-gray-300 text-sm mb-2">
-            Loại ảnh: <span className="font-semibold text-primary-400">{imageType}</span>
+            Image Type: <span className="font-semibold text-primary-400">{imageType}</span>
           </p>
           
           {/* Warning */}
@@ -82,29 +82,29 @@ export const ImageDeleteRequestModal: React.FC<ImageDeleteRequestModalProps> = (
               </svg>
               <div>
                 <h4 className="text-yellow-400 font-semibold text-sm mb-1">
-                  Lưu ý quan trọng
+                  Important Notice
                 </h4>
                 <ul className="text-yellow-200 text-xs space-y-1">
-                  <li>• Yêu cầu xóa ảnh sẽ được gửi đến Admin để phê duyệt</li>
-                  <li>• Ảnh chỉ được xóa sau khi Admin đồng ý</li>
-                  <li>• Không thể hủy yêu cầu sau khi đã gửi</li>
+                  <li>• Deletion request will be sent to Admin for approval</li>
+                  <li>• Image will only be deleted after Admin approval</li>
+                  <li>• Cannot cancel request after submission</li>
                 </ul>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Cột phải - Form */}
+        {/* Right Column - Form */}
         <div className="flex flex-col">
           <div className="mb-4">
             <p className="text-sm text-gray-400 mb-4">
-              Vui lòng chọn lý do để yêu cầu xóa ảnh này
+              Please select a reason to request deletion of this image
             </p>
           </div>
 
           <div className="flex-1">
             <label className="block text-sm font-medium text-gray-300 mb-3">
-              Lý do xóa ảnh:
+              Reason for deletion:
             </label>
             
             <div className="space-y-2 mb-4">
@@ -124,7 +124,7 @@ export const ImageDeleteRequestModal: React.FC<ImageDeleteRequestModalProps> = (
             </div>
 
             <Input
-              placeholder="Hoặc nhập lý do tùy chỉnh..."
+              placeholder="Or enter custom reason..."
               value={reason}
               onChange={(e) => setReason(e.target.value)}
             />
@@ -141,7 +141,7 @@ export const ImageDeleteRequestModal: React.FC<ImageDeleteRequestModalProps> = (
             className="flex-1"
             disabled={loading}
           >
-            Hủy
+            Cancel
           </Button>
           <Button
             onClick={handleSubmit}
@@ -149,7 +149,7 @@ export const ImageDeleteRequestModal: React.FC<ImageDeleteRequestModalProps> = (
             className="flex-1"
           >
             <TrashIcon className="w-4 h-4 mr-2" />
-            {loading ? 'Đang gửi...' : 'Gửi Yêu Cầu'}
+            {loading ? 'Sending...' : 'Submit Request'}
           </Button>
         </div>
       </div>

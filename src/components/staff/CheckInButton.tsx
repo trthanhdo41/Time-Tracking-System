@@ -38,7 +38,7 @@ export const CheckInButton: React.FC = () => {
       }
     } catch (error) {
       console.error('Camera access error:', error);
-      toast.error('Không thể truy cập camera. Vui lòng kiểm tra quyền truy cập.');
+      toast.error('Unable to access camera. Please check permissions.');
     }
   };
 
@@ -60,7 +60,7 @@ export const CheckInButton: React.FC = () => {
       const detection = await detectFace(videoRef.current);
       
       if (!detection) {
-        toast.error('Không phát hiện khuôn mặt. Vui lòng thử lại.');
+        toast.error('No face detected. Please try again.');
         setLoading(false);
         setStep('camera');
         return;
@@ -78,8 +78,8 @@ export const CheckInButton: React.FC = () => {
         if (baseFaceDetection) {
           const similarity = compareFaces(detection.descriptor, baseFaceDetection.descriptor);
           
-          if (similarity < 0.6) {
-            toast.error('Khuôn mặt không khớp. Vui lòng thử lại.');
+          if (similarity < 0.7) { // Increased from 0.6 to 0.7 for better accuracy
+            toast.error('Face mismatch. Please try again.');
             soundManager.playError();
             setLoading(false);
             setStep('camera');
@@ -103,12 +103,12 @@ export const CheckInButton: React.FC = () => {
           );
         } catch (uploadError) {
           console.error('Image upload error:', uploadError);
-          toast.error('Không thể upload ảnh, nhưng check-in vẫn tiếp tục');
+          toast.error('Unable to upload image, but check-in will continue');
           // Continue with empty face1Url - system still works without image
         }
       } else {
         console.warn('Image upload not configured. Add VITE_IMGBB_API_KEY to .env');
-        toast.error('Chưa cấu hình upload ảnh. Check-in không lưu ảnh.');
+        toast.error('Image upload not configured. Check-in without saving image.');
       }
 
       // Update user with Face1 URL
@@ -129,7 +129,7 @@ export const CheckInButton: React.FC = () => {
 
       setStep('success');
       soundManager.playSuccess();
-      toast.success('Check-in thành công!');
+      toast.success('Check-in successful!');
 
       setTimeout(() => {
         stopCamera();
@@ -139,7 +139,7 @@ export const CheckInButton: React.FC = () => {
 
     } catch (error) {
       console.error('Check-in error:', error);
-      toast.error('Lỗi khi check-in. Vui lòng thử lại.');
+      toast.error('Check-in error. Please try again.');
       soundManager.playError();
       setLoading(false);
       setStep('camera');
@@ -210,10 +210,10 @@ export const CheckInButton: React.FC = () => {
 
               <div className="text-center space-y-2">
                 <p className="text-gray-300">
-                  Vui lòng đặt khuôn mặt vào trong khung hình
+                  Please position your face in the frame
                 </p>
                 <p className="text-sm text-gray-500">
-                  Đảm bảo ánh sáng đủ và nhìn thẳng vào camera
+                  Ensure good lighting and look straight at the camera
                 </p>
               </div>
 
@@ -225,7 +225,7 @@ export const CheckInButton: React.FC = () => {
                 loading={loading}
                 className="w-full"
               >
-                Xác Nhận Check In
+                Confirm Check In
               </Button>
             </motion.div>
           )}
@@ -237,7 +237,7 @@ export const CheckInButton: React.FC = () => {
               className="py-12 text-center space-y-4"
             >
               <div className="inline-block w-16 h-16 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
-              <p className="text-lg text-gray-300">Đang xác thực khuôn mặt...</p>
+              <p className="text-lg text-gray-300">Verifying face...</p>
             </motion.div>
           )}
 
@@ -256,8 +256,8 @@ export const CheckInButton: React.FC = () => {
                 <CheckInIcon className="w-10 h-10 text-green-500" />
               </motion.div>
               <div>
-                <h3 className="text-2xl font-bold text-green-500">Check-in Thành Công!</h3>
-                <p className="text-gray-400 mt-2">Chúc bạn làm việc hiệu quả</p>
+                <h3 className="text-2xl font-bold text-green-500">Check-in Successful!</h3>
+                <p className="text-gray-400 mt-2">Have a productive day</p>
               </div>
             </motion.div>
           )}

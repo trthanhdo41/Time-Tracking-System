@@ -3,16 +3,18 @@ export type UserRole = 'admin' | 'department_admin' | 'staff';
 export type UserStatus = 'online' | 'offline' | 'back_soon';
 
 export type ActionType = 
-  | 'check_in'
-  | 'check_out'
-  | 'back_soon'
-  | 'back_online'
+  | 'check_in'       // Face recognition work check-in
+  | 'check_out'      // Face recognition work check-out
+  | 'back_soon'      // Back soon status
+  | 'back_online'    // Return from back soon
   | 'captcha_verify'
   | 'captcha_failed'
   | 'face_verify'
   | 'face_verification_failed'
   | 'delete_image_request'
   | 'error_report'
+  | 'login'          // System login (authentication)
+  | 'logout'         // System logout (authentication)
   | 'account_created'
   | 'account_updated'
   | 'account_deleted'
@@ -21,7 +23,8 @@ export type ActionType =
 
 export interface User {
   id: string;
-  username: string;
+  username: string; // Username for login/forgot password
+  fullName?: string; // Optional full name for display
   email: string;
   role: UserRole;
   department: string;
@@ -64,7 +67,7 @@ export interface BackSoonRecord {
   id: string;
   sessionId: string;
   userId: string;
-  reason: 'meeting' | 'wc' | 'other';
+  reason: 'meeting' | 'toilet' | 'other';
   customReason?: string;
   startTime: number;
   endTime?: number;

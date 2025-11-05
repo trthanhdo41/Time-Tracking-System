@@ -91,7 +91,7 @@ export const generateUserReport = async (
     return reports;
   } catch (error) {
     console.error('Error generating user report:', error);
-    throw new Error('Không thể tạo báo cáo người dùng');
+    throw new Error('Unable to create user report');
   }
 };
 
@@ -177,7 +177,7 @@ export const generateDepartmentReport = async (
     };
   } catch (error) {
     console.error('Error generating department report:', error);
-    throw new Error('Không thể tạo báo cáo phòng ban');
+    throw new Error('Unable to create department report');
   }
 };
 
@@ -244,7 +244,7 @@ export const generateSystemReport = async (
     };
   } catch (error) {
     console.error('Error generating system report:', error);
-    throw new Error('Không thể tạo báo cáo hệ thống');
+    throw new Error('Unable to create system report');
   }
 };
 
@@ -280,18 +280,18 @@ const calculateDepartmentPunctualityRate = (sessions: Session[]): number => {
 
 export const exportReportToCSV = (reports: ReportData[]): string => {
   const headers = [
-    'Tên Nhân Viên',
-    'Phòng Ban',
-    'Chức Vụ',
-    'Tổng Thời Gian Online (giây)',
-    'Tổng Thời Gian Back Soon (giây)',
-    'Số Phiên Làm Việc',
-    'Thời Gian Trung Bình/Phiên (giây)',
-    'Tỷ Lệ Đúng Giờ (%)',
-    'Số Lần Back Soon',
-    'Ngày Check In',
-    'Thời Gian Check In',
-    'Thời Gian Check Out'
+    'Employee Name',
+    'Department',
+    'Position',
+    'Total Online Time (seconds)',
+    'Total Back Soon Time (seconds)',
+    'Number of Work Sessions',
+    'Average Time/Session (seconds)',
+    'On-Time Rate (%)',
+    'Number of Back Soon',
+    'Check In Date',
+    'Check In Time',
+    'Check Out Time'
   ];
 
   const rows = reports.map(report => [
@@ -305,8 +305,8 @@ export const exportReportToCSV = (reports: ReportData[]): string => {
     report.punctualityRate.toFixed(2),
     report.backSoonCount,
     report.date,
-    new Date(report.checkInTime).toLocaleString('vi-VN'),
-    report.checkOutTime ? new Date(report.checkOutTime).toLocaleString('vi-VN') : 'Chưa check out'
+    new Date(report.checkInTime).toLocaleString('en-US'),
+    report.checkOutTime ? new Date(report.checkOutTime).toLocaleString('en-US') : 'Not checked out yet'
   ]);
 
   const csvContent = [headers, ...rows]

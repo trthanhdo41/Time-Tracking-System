@@ -4,6 +4,7 @@ import { Card, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { StaffNavigation } from '@/components/layout/StaffNavigation';
+import { useLocation } from 'react-router-dom';
 import { 
   HistoryIcon, 
   FilterIcon, 
@@ -15,42 +16,117 @@ import {
 } from '@/components/icons';
 import { formatTime, formatDate, formatDuration } from '@/utils/time';
 import { useAuthStore } from '@/store/authStore';
-import { getUserSessionHistory } from '@/services/sessionService';
+import { getUserSessionHistory, getAllSessionsHistory } from '@/services/sessionService';
+import { getAllUsers } from '@/services/userService';
 import { Session } from '@/types';
 import toast from 'react-hot-toast';
 
-export const HistoryPage: React.FC = () => {
+interface HistoryPageProps {
+  selectedUserId?: string | 'all'; // For admin to view specific user's history or 'all' for all users
+  showNavigation?: boolean; // Whether to show StaffNavigation
+}
+
+export const HistoryPage: React.FC<HistoryPageProps> = ({ selectedUserId, showNavigation = true }) => {
   const { user } = useAuthStore();
+  const location = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
+  const [users, setUsers] = useState<Record<string, { username: string; email: string; department: string }>>({});
+  
+  // Determine if we're in admin context (no StaffNavigation needed)
+  const isInAdminContext = location.pathname === '/' && user?.role === 'admin';
+  const displayNavigation = showNavigation && !isInAdminContext;
+  
+  // Use selectedUserId if provided (for admin), otherwise use current user's ID
+  const userIdToLoad = selectedUserId || user?.id;
+  const showAllUsers = selectedUserId === 'all';
+
+  // Load users data when showing all users
+  useEffect(() => {
+    if (showAllUsers) {
+      const loadUsers = async () => {
+        try {
+          const usersData = await getAllUsers();
+          const usersMap: Record<string, { username: string; email: string; department: string }> = {};
+          usersData.forEach(u => {
+            usersMap[u.id] = {
+              username: u.username,
+              email: u.email,
+              department: u.department
+            };
+          });
+          setUsers(usersMap);
+        } catch (error) {
+          console.error('Error loading users:', error);
+        }
+      };
+      loadUsers();
+    }
+  }, [showAllUsers]);
 
   // Load session history
   useEffect(() => {
-    if (!user) return;
-    
-    loadHistory();
-  }, [user, startDate, endDate]);
-
-  const loadHistory = async () => {
-    if (!user) return;
-    
-    try {
-      setLoading(true);
-      const startTimestamp = startDate ? new Date(startDate).getTime() : undefined;
-      const endTimestamp = endDate ? new Date(endDate).getTime() + 86400000 : undefined; // Add 1 day
+    const loadHistory = async () => {
+      // If showing all users, we don't need userIdToLoad
+      // If showing specific user, we need userIdToLoad
+      if (!showAllUsers && !userIdToLoad) return;
       
-      const history = await getUserSessionHistory(user.id, startTimestamp, endTimestamp);
-      setSessions(history);
-    } catch (error: any) {
-      toast.error(error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+      try {
+        setLoading(true);
+        // Convert date strings to timestamps (start of day to end of day)
+        let startTimestamp: number | undefined;
+        let endTimestamp: number | undefined;
+        
+        if (startDate) {
+          const startDateObj = new Date(startDate + 'T00:00:00');
+          startTimestamp = startDateObj.getTime();
+          if (isNaN(startTimestamp)) {
+            console.error('Invalid start date:', startDate);
+            startTimestamp = undefined;
+          }
+        }
+        
+        if (endDate) {
+          const endDateObj = new Date(endDate + 'T23:59:59');
+          endTimestamp = endDateObj.getTime();
+          if (isNaN(endTimestamp)) {
+            console.error('Invalid end date:', endDate);
+            endTimestamp = undefined;
+          }
+        }
+        
+        console.log('Loading history with filters:', { 
+          startDate, 
+          endDate, 
+          startTimestamp: startTimestamp ? new Date(startTimestamp).toISOString() : undefined, 
+          endTimestamp: endTimestamp ? new Date(endTimestamp).toISOString() : undefined, 
+          userIdToLoad, 
+          showAllUsers 
+        });
+        
+        let history: Session[];
+        if (showAllUsers) {
+          history = await getAllSessionsHistory(startTimestamp, endTimestamp);
+        } else {
+          history = await getUserSessionHistory(userIdToLoad as string, startTimestamp, endTimestamp);
+        }
+        
+        console.log('Loaded history:', history.length, 'sessions');
+        setSessions(history);
+      } catch (error: any) {
+        console.error('Error loading history:', error);
+        toast.error(error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadHistory();
+  }, [userIdToLoad, startDate, endDate, showAllUsers]);
 
   // Calculate stats
   const stats = {
@@ -82,17 +158,29 @@ export const HistoryPage: React.FC = () => {
     const date = formatDate(session.checkInTime);
     const reason = session.checkOutReason || '';
     const backSoonReasons = (session.backSoonEvents || []).map(e => e.reason).join(' ');
+    const searchLower = searchQuery.toLowerCase();
     
-    return date.toLowerCase().includes(searchQuery.toLowerCase()) ||
-           reason.toLowerCase().includes(searchQuery.toLowerCase()) ||
-           backSoonReasons.toLowerCase().includes(searchQuery.toLowerCase());
+    // Basic search fields (always available)
+    let matches = date.toLowerCase().includes(searchLower) ||
+                  reason.toLowerCase().includes(searchLower) ||
+                  backSoonReasons.toLowerCase().includes(searchLower);
+    
+    // Additional search fields when viewing all users
+    if (showAllUsers && session.userId && users[session.userId]) {
+      matches = matches ||
+                users[session.userId].username.toLowerCase().includes(searchLower) ||
+                users[session.userId].email.toLowerCase().includes(searchLower) ||
+                users[session.userId].department.toLowerCase().includes(searchLower);
+    }
+    
+    return matches;
   });
 
   return (
     <div className="min-h-screen pb-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Navigation */}
-        <StaffNavigation />
+        {displayNavigation && <StaffNavigation />}
 
         {/* Header */}
         <motion.div
@@ -105,8 +193,8 @@ export const HistoryPage: React.FC = () => {
               <HistoryIcon className="w-8 h-8 text-primary-400" />
             </div>
             <div>
-              <h1 className="text-4xl font-bold gradient-text">Lịch Sử</h1>
-              <p className="text-gray-400">Xem chi tiết hoạt động của bạn</p>
+              <h1 className="text-4xl font-bold gradient-text">History</h1>
+              <p className="text-gray-400">View your activity details</p>
             </div>
           </div>
 
@@ -115,7 +203,7 @@ export const HistoryPage: React.FC = () => {
             icon={<FilterIcon />}
             onClick={() => setShowFilters(!showFilters)}
           >
-            Lọc
+            Filter
           </Button>
         </motion.div>
 
@@ -131,13 +219,13 @@ export const HistoryPage: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Input
                   type="date"
-                  label="Từ ngày"
+                  label="From Date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
                 />
                 <Input
                   type="date"
-                  label="Đến ngày"
+                  label="To Date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
                 />
@@ -150,7 +238,7 @@ export const HistoryPage: React.FC = () => {
         <Card className="mb-6">
           <Input
             type="text"
-            placeholder="Tìm kiếm theo ngày hoặc lý do..."
+            placeholder="Search by date or reason..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             icon={<SearchIcon className="w-5 h-5" />}
@@ -160,11 +248,11 @@ export const HistoryPage: React.FC = () => {
         {/* Summary Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <Card gradient>
-            <CardHeader title="Tổng Giờ Làm" icon={<ChartIcon />} />
+            <CardHeader title="Total Work Hours" icon={<ChartIcon />} />
             <div className="text-3xl font-bold text-primary-400">
               {formatDuration(stats.totalOnlineTime)}
             </div>
-            <p className="text-sm text-gray-400 mt-2">{sessions.length} phiên</p>
+            <p className="text-sm text-gray-400 mt-2">{sessions.length} sessions</p>
           </Card>
 
           <Card gradient>
@@ -172,7 +260,7 @@ export const HistoryPage: React.FC = () => {
             <div className="text-3xl font-bold text-yellow-400">
               {formatDuration(stats.totalBackSoonTime)}
             </div>
-            <p className="text-sm text-gray-400 mt-2">Tổng cộng</p>
+            <p className="text-sm text-gray-400 mt-2">Total</p>
           </Card>
         </div>
 
@@ -180,12 +268,12 @@ export const HistoryPage: React.FC = () => {
         <div className="space-y-4">
           {loading ? (
             <Card className="text-center py-12">
-              <p className="text-gray-400">Đang tải...</p>
+              <p className="text-gray-400">Loading...</p>
             </Card>
           ) : filteredSessions.length === 0 ? (
             <Card className="text-center py-12">
               <HistoryIcon className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-              <p className="text-gray-400">Không có dữ liệu lịch sử</p>
+              <p className="text-gray-400">No history data</p>
             </Card>
           ) : (
             filteredSessions.map((record, index) => (
@@ -202,7 +290,14 @@ export const HistoryPage: React.FC = () => {
                       <HistoryIcon className="w-6 h-6 text-primary-400" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold">{formatDate(record.checkInTime)}</h3>
+                      <h3 className="text-lg font-semibold">
+                        {formatDate(record.checkInTime)}
+                        {showAllUsers && record.userId && users[record.userId] && (
+                          <span className="ml-2 text-sm text-primary-400 font-normal">
+                            • {users[record.userId].username}
+                          </span>
+                        )}
+                      </h3>
                       <p className="text-sm text-gray-400">
                         {(() => {
                           // Convert Firebase Timestamp to number
@@ -213,8 +308,11 @@ export const HistoryPage: React.FC = () => {
                             ts = ts.seconds * 1000;
                           }
                           if (!ts) return '';
-                          return new Date(ts).toLocaleDateString('vi-VN', { weekday: 'long' });
+                          return new Date(ts).toLocaleDateString('en-US', { weekday: 'long' });
                         })()}
+                        {showAllUsers && record.userId && users[record.userId] && (
+                          <span className="ml-2">• {users[record.userId].department}</span>
+                        )}
                       </p>
                     </div>
                   </div>
@@ -247,17 +345,24 @@ export const HistoryPage: React.FC = () => {
                   </div>
 
                   {/* Back Soon Records */}
-                  {(record.backSoonEvents || []).map((backSoon, idx) => (
-                    <div key={idx} className="flex items-center gap-3 glass p-3 rounded-lg">
-                      <BackSoonIcon className="w-5 h-5 text-yellow-500 flex-shrink-0" />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">Back Soon - {backSoon.reason || 'Unknown'}</p>
-                        <p className="text-xs text-gray-400">
-                          {formatTime(backSoon.startTime)} • {formatDuration(Math.floor((backSoon.duration || 0) / 1000))}
-                        </p>
+                  {(record.backSoonEvents || []).map((backSoon, idx) => {
+                    let reasonDisplay = 'Unknown';
+                    if (backSoon.reason === 'meeting') reasonDisplay = 'Meeting';
+                    else if (backSoon.reason === 'toilet') reasonDisplay = 'Toilet';
+                    else if (backSoon.reason === 'other') reasonDisplay = backSoon.customReason || 'Other';
+                    
+                    return (
+                      <div key={idx} className="flex items-center gap-3 glass p-3 rounded-lg">
+                        <BackSoonIcon className="w-5 h-5 text-yellow-500 flex-shrink-0" />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">Back Soon - {reasonDisplay}</p>
+                          <p className="text-xs text-gray-400">
+                            {formatTime(backSoon.startTime)} • {formatDuration(Math.floor((backSoon.duration || 0) / 1000))}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
 
                   {/* Check Out */}
                   {record.checkOutTime && (

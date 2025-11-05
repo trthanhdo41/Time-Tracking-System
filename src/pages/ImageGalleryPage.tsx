@@ -25,8 +25,8 @@ export const ImageGalleryPage: React.FC = () => {
             <ImageIcon className="w-8 h-8 text-primary-400" />
           </div>
           <div>
-            <h1 className="text-4xl font-bold gradient-text">Thư Viện Ảnh</h1>
-            <p className="text-gray-400">Xem và quản lý hình ảnh của bạn</p>
+            <h1 className="text-4xl font-bold gradient-text">Image Gallery</h1>
+            <p className="text-gray-400">View and manage your images</p>
           </div>
         </motion.div>
 

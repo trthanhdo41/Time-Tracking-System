@@ -30,9 +30,9 @@ class SoundManager {
     oscillator.stop(this.audioContext.currentTime + duration);
   }
 
-  // Notification sound for captcha (5 seconds)
+  // Notification sound for captcha (louder - 0.7 volume)
   playCaptchaNotification(): void {
-    // Play a pleasant melody
+    // Play a pleasant melody with louder volume
     const melody = [
       { freq: 523.25, time: 0 },    // C5
       { freq: 659.25, time: 0.2 },  // E5
@@ -41,7 +41,7 @@ class SoundManager {
 
     melody.forEach(note => {
       setTimeout(() => {
-        this.createBeep(note.freq, 0.15, 0.2);
+        this.createBeep(note.freq, 0.15, 0.7); // Increased volume from 0.2 to 0.7
       }, note.time * 1000);
     });
   }

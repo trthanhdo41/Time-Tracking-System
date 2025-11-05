@@ -40,8 +40,8 @@ export const NotificationManager: React.FC<NotificationManagerProps> = ({
         showNotification({
           id: 'captcha_warning',
           type: 'captcha',
-          title: 'CAPTCHA Sắp Xuất Hiện',
-          message: 'CAPTCHA sẽ xuất hiện sau 5 giây nữa. Vui lòng chuẩn bị.',
+          title: 'CAPTCHA Coming Soon',
+          message: 'CAPTCHA will appear in 5 seconds. Please prepare.',
           timestamp: Date.now(),
           acknowledged: false,
           actionRequired: false
@@ -63,8 +63,8 @@ export const NotificationManager: React.FC<NotificationManagerProps> = ({
         showNotification({
           id: 'face_verify_warning',
           type: 'face_verify',
-          title: 'Xác Thực Khuôn Mặt Sắp Diễn Ra',
-          message: 'Hệ thống sẽ yêu cầu xác thực khuôn mặt sau 5 phút. Vui lòng chuẩn bị.',
+          title: 'Face Verification Coming Soon',
+          message: 'System will require face verification in 5 minutes. Please prepare.',
           timestamp: Date.now(),
           acknowledged: false,
           actionRequired: true
@@ -124,11 +124,11 @@ export const NotificationManager: React.FC<NotificationManagerProps> = ({
       });
       
       toast.success(
-        newEnabled ? 'Đã bật thông báo' : 'Đã tắt thông báo'
+        newEnabled ? 'Notifications enabled' : 'Notifications disabled'
       );
     } catch (error) {
       console.error('Error updating notification preference:', error);
-      toast.error('Không thể cập nhật cài đặt thông báo');
+      toast.error('Unable to update notification settings');
     }
   };
 
@@ -169,7 +169,7 @@ export const NotificationManager: React.FC<NotificationManagerProps> = ({
           className={`${isEnabled ? 'bg-green-500/20 border-green-500 text-green-400' : 'bg-gray-500/20 border-gray-500 text-gray-400'} shadow-lg`}
         >
           <BellIcon className="w-4 h-4 mr-2" />
-          {isEnabled ? 'Tắt Thông Báo' : 'Bật Thông Báo'}
+          {isEnabled ? 'Disable Notifications' : 'Enable Notifications'}
         </Button>
       </div>
 
@@ -197,7 +197,7 @@ export const NotificationManager: React.FC<NotificationManagerProps> = ({
                   </p>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-gray-400">
-                      {new Date(notification.timestamp).toLocaleTimeString('vi-VN')}
+                      {new Date(notification.timestamp).toLocaleTimeString('en-US')}
                     </span>
                     <Button
                       variant="outline"

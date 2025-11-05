@@ -3,11 +3,13 @@ import {
   doc, 
   addDoc, 
   updateDoc, 
+  getDoc,
   getDocs, 
   query, 
   where, 
   orderBy,
-  onSnapshot 
+  onSnapshot,
+  deleteField
 } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { ImageDeleteRequest } from '@/types';
@@ -49,12 +51,12 @@ export const createImageDeleteRequest = async (
       { imageUrl, requestId: docRef.id }
     );
 
-    toast.success('Đã gửi yêu cầu xóa ảnh. Vui lòng chờ phê duyệt.');
+    toast.success('Image deletion request sent. Please wait for approval.');
     return docRef.id;
   } catch (error) {
     console.error('Error creating image delete request:', error);
-    toast.error('Không thể gửi yêu cầu xóa ảnh');
-    throw new Error('Không thể tạo yêu cầu xóa ảnh');
+    toast.error('Unable to send image deletion request');
+    throw new Error('Unable to create image deletion request');
   }
 };
 
@@ -109,18 +111,92 @@ export const getPendingImageDeleteRequests = async (): Promise<ImageDeleteReques
 };
 
 /**
- * Approve an image delete request
+ * Approve an image delete request and actually delete the image from sessions/faceVerifications
  */
 export const approveImageDeleteRequest = async (
   requestId: string,
   adminUser: any
 ): Promise<void> => {
   try {
+    // Get the request to find the imageUrl
+    const requestDoc = await getDoc(doc(db, 'imageDeleteRequests', requestId));
+    if (!requestDoc.exists()) {
+      throw new Error('Image delete request not found');
+    }
+    
+    const requestData = requestDoc.data() as ImageDeleteRequest;
+    const imageUrl = requestData.imageUrl;
+
+    // Find and delete image from sessions collection
+    const sessionsQuery = query(
+      collection(db, 'sessions'),
+      where('userId', '==', requestData.userId)
+    );
+    const sessionsSnapshot = await getDocs(sessionsQuery);
+    
+    let deletedCount = 0;
+    const sessionUpdatePromises: Promise<void>[] = [];
+    
+    sessionsSnapshot.forEach((sessionDoc) => {
+      const sessionData = sessionDoc.data();
+      const updates: any = {};
+      
+      // Check and delete faceImageUrl if matches
+      if (sessionData.faceImageUrl === imageUrl) {
+        updates.faceImageUrl = deleteField();
+        deletedCount++;
+      }
+      
+      // Check and delete face1Url if matches
+      if (sessionData.face1Url === imageUrl) {
+        updates.face1Url = deleteField();
+        deletedCount++;
+      }
+      
+      // Check and delete face2Url if matches
+      if (sessionData.face2Url === imageUrl) {
+        updates.face2Url = deleteField();
+        deletedCount++;
+      }
+      
+      // Update session if any fields need to be deleted
+      if (Object.keys(updates).length > 0) {
+        sessionUpdatePromises.push(
+          updateDoc(doc(db, 'sessions', sessionDoc.id), updates)
+        );
+      }
+    });
+    
+    // Wait for all session updates to complete
+    await Promise.all(sessionUpdatePromises);
+    
+    // Find and delete image from faceVerifications collection
+    const faceVerifyQuery = query(
+      collection(db, 'faceVerifications'),
+      where('userId', '==', requestData.userId),
+      where('imageUrl', '==', imageUrl)
+    );
+    const faceVerifySnapshot = await getDocs(faceVerifyQuery);
+    
+    const faceVerifyUpdatePromises: Promise<void>[] = [];
+    faceVerifySnapshot.forEach((verifyDoc) => {
+      faceVerifyUpdatePromises.push(
+        updateDoc(doc(db, 'faceVerifications', verifyDoc.id), {
+          imageUrl: deleteField()
+        })
+      );
+      deletedCount++;
+    });
+    
+    // Wait for all faceVerification updates to complete
+    await Promise.all(faceVerifyUpdatePromises);
+    
+    // Update request status to approved
     await updateDoc(doc(db, 'imageDeleteRequests', requestId), {
       status: 'approved',
       reviewedAt: Date.now(),
       reviewedBy: adminUser.id,
-      reviewerComment: 'Approved by admin'
+      reviewerComment: 'Approved by admin - Image deleted'
     });
 
     // Log activity
@@ -131,16 +207,16 @@ export const approveImageDeleteRequest = async (
       adminUser.department,
       adminUser.position,
       'delete_image_request',
-      `Approved image delete request: ${requestId}`,
+      `Approved and deleted image from ${deletedCount} location(s): ${requestId}`,
       adminUser.id,
       adminUser.role,
       adminUser.department,
-      { requestId, action: 'approved' }
+      { requestId, imageUrl, deletedCount, action: 'approved_and_deleted' }
     );
 
   } catch (error) {
     console.error('Error approving image delete request:', error);
-    throw new Error('Không thể phê duyệt yêu cầu xóa ảnh');
+    throw new Error('Unable to approve image deletion request');
   }
 };
 
@@ -177,7 +253,7 @@ export const rejectImageDeleteRequest = async (
 
   } catch (error) {
     console.error('Error rejecting image delete request:', error);
-    throw new Error('Không thể từ chối yêu cầu xóa ảnh');
+    throw new Error('Unable to reject image deletion request');
   }
 };
 

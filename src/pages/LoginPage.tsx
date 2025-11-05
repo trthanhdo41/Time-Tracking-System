@@ -1,28 +1,86 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { Modal } from '@/components/ui/Modal';
 import { LockIcon } from '@/components/icons';
 import { signIn } from '@/services/auth';
 import { useAuthStore } from '@/store/authStore';
+import { getTermsAndConditions } from '@/services/termsService';
 import toast from 'react-hot-toast';
 
+const REMEMBER_USERNAME_KEY = 'remembered_username';
+
 export const LoginPage: React.FC = () => {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+  const [termsContent, setTermsContent] = useState<string>('');
   const { setUser } = useAuthStore();
+
+  // Load remembered username on mount
+  useEffect(() => {
+    const remembered = localStorage.getItem(REMEMBER_USERNAME_KEY);
+    if (remembered) {
+      setUsername(remembered);
+      setRememberMe(true);
+    }
+  }, []);
+
+  // Load Terms and Conditions on mount
+  useEffect(() => {
+    const loadTerms = async () => {
+      try {
+        const terms = await getTermsAndConditions();
+        if (terms) {
+          setTermsContent(terms.content);
+        } else {
+          // Fallback if service returns null
+          setTermsContent('Welcome to Enterprise Time Tracking System. By using this system, you agree to comply with all company policies and guidelines.');
+        }
+      } catch (error) {
+        console.error('Error loading Terms and Conditions:', error);
+        // Fallback content
+        setTermsContent('Welcome to Enterprise Time Tracking System. By using this system, you agree to comply with all company policies and guidelines.');
+      }
+    };
+    loadTerms();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!termsAccepted) {
+      toast.error('Please accept the Terms and Conditions to continue');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const user = await signIn(email, password);
+      const user = await signIn(username, password);
       setUser(user);
-      toast.success('Đăng nhập thành công!');
+      
+      // Save username if Remember me is checked
+      if (rememberMe) {
+        localStorage.setItem(REMEMBER_USERNAME_KEY, username);
+      } else {
+        localStorage.removeItem(REMEMBER_USERNAME_KEY);
+      }
+      
+      // Auto-save admin password for re-login after creating users
+      if (user.role === 'admin' || user.role === 'department_admin') {
+        sessionStorage.setItem('admin_password_for_relogin', password);
+        sessionStorage.setItem('admin_email_for_relogin', user.email);
+      }
+      
+      toast.success('Login successful!');
     } catch (error: any) {
-      toast.error(error.message || 'Đăng nhập thất bại');
+      toast.error(error.message || 'Login failed');
     } finally {
       setLoading(false);
     }
@@ -197,23 +255,62 @@ export const LoginPage: React.FC = () => {
           {/* Login Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
             <Input
-              label="Email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="email@example.com"
+              label="Username"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Enter username or email"
               required
             />
 
             <Input
-              label="Mật Khẩu"
+              label="Password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              icon={<LockIcon className="w-5 h-5" />}
               required
             />
+
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 rounded border-gray-600 bg-dark-700 text-primary-500 focus:ring-primary-500 focus:ring-2"
+                />
+                <span className="text-sm text-gray-400">Remember me</span>
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowForgotPassword(true)}
+                className="text-sm text-primary-400 hover:text-primary-300 transition-colors"
+              >
+                Forgot Password?
+              </button>
+            </div>
+
+            {/* Terms and Conditions Checkbox */}
+            <div className="flex items-start gap-2">
+              <input
+                type="checkbox"
+                checked={termsAccepted}
+                onChange={(e) => setTermsAccepted(e.target.checked)}
+                className="mt-1 w-4 h-4 rounded border-gray-600 bg-dark-700 text-primary-500 focus:ring-primary-500 focus:ring-2 flex-shrink-0"
+                required
+              />
+              <label className="text-sm text-gray-400 cursor-pointer flex-1">
+                I agree to the{' '}
+                <button
+                  type="button"
+                  onClick={() => setShowTermsModal(true)}
+                  className="text-primary-400 hover:text-primary-300 underline transition-colors"
+                >
+                  Terms and Conditions
+                </button>
+              </label>
+            </div>
 
             <Button
               type="submit"
@@ -221,8 +318,9 @@ export const LoginPage: React.FC = () => {
               size="lg"
               loading={loading}
               className="w-full"
+              disabled={!termsAccepted}
             >
-              Đăng Nhập
+              Login
             </Button>
           </form>
 
@@ -232,7 +330,120 @@ export const LoginPage: React.FC = () => {
           </p>
         </div>
       </motion.div>
+
+      {/* Forgot Password Modal */}
+      <ForgotPasswordModal
+        isOpen={showForgotPassword}
+        onClose={() => setShowForgotPassword(false)}
+      />
+
+      {/* Terms and Conditions Modal */}
+      <Modal
+        isOpen={showTermsModal}
+        onClose={() => setShowTermsModal(false)}
+        title="Terms and Conditions"
+        size="lg"
+      >
+        <div className="max-h-96 overflow-y-auto">
+          <div className="prose prose-invert max-w-none">
+            <pre className="whitespace-pre-wrap text-sm text-gray-300 font-sans">
+              {termsContent || 'Loading Terms and Conditions...'}
+            </pre>
+          </div>
+        </div>
+        <div className="flex justify-end pt-4 mt-4 border-t border-dark-600">
+          <Button
+            variant="primary"
+            onClick={() => {
+              setShowTermsModal(false);
+              setTermsAccepted(true);
+            }}
+          >
+            I Agree
+          </Button>
+        </div>
+      </Modal>
     </div>
+  );
+};
+
+// Forgot Password Modal Component
+interface ForgotPasswordModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen, onClose }) => {
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!forgotEmail) {
+      toast.error('Please enter your email address');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Import forgot password service
+      const { submitForgotPasswordRequest } = await import('@/services/forgotPasswordService');
+      await submitForgotPasswordRequest(forgotEmail);
+      
+      toast.success('Password reset request submitted. Admin will process it shortly.');
+      setForgotEmail('');
+      onClose();
+    } catch (error: any) {
+      toast.error(error.message || 'Unable to submit password reset request');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Forgot Password"
+      size="md"
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <p className="text-sm text-gray-400 mb-4">
+          Please enter your Email. Your request will be sent to Admin for password reset.
+        </p>
+
+
+        <Input
+          label="Email"
+          type="email"
+          value={forgotEmail}
+          onChange={(e) => setForgotEmail(e.target.value)}
+          placeholder="Enter your email"
+          required
+        />
+
+        <div className="flex gap-3 pt-4">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={onClose}
+            className="flex-1"
+            disabled={loading}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            variant="primary"
+            loading={loading}
+            className="flex-1"
+          >
+            Submit Request
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 };
 

@@ -81,10 +81,42 @@ export const AdminDashboard: React.FC = () => {
   const handleAddUser = async () => {
     if (!currentUser) return;
 
-    try {
-      await createNewUser(newUserData);
+    // Validate form
+    if (!newUserData.username || !newUserData.email || !newUserData.password) {
+      toast.error('Please fill in all information');
+      return;
+    }
+
+    // Validate department_admin requirements
+    if (newUserData.role === 'department_admin') {
+      if (!newUserData.department || newUserData.department.trim() === '') {
+        toast.error('Department is required for Department Admin role');
+        return;
+      }
       
-      toast.success('Thêm nhân viên thành công!');
+      // Check if department already has a department_admin
+      const existingDeptAdmin = users.find(
+        user => user.role === 'department_admin' && user.department === newUserData.department && user.isActive !== false
+      );
+      
+      if (existingDeptAdmin) {
+        toast.error(`Department "${newUserData.department}" already has a Department Admin`);
+        return;
+      }
+    }
+
+    try {
+      await createNewUser(
+        newUserData.email,
+        newUserData.password,
+        newUserData.username,
+        newUserData.role,
+        newUserData.department,
+        newUserData.position,
+        currentUser
+      );
+      
+      toast.success('Employee added successfully!');
       setShowAddUser(false);
       setNewUserData({
         username: '',
@@ -101,11 +133,11 @@ export const AdminDashboard: React.FC = () => {
   };
 
   const handleDeleteUser = async (userId: string, username: string) => {
-    if (!confirm(`Bạn có chắc muốn xóa nhân viên ${username}?`)) return;
+    if (!confirm(`Are you sure you want to delete employee ${username}?`)) return;
 
     try {
       await deleteUser(userId);
-      toast.success('Xóa nhân viên thành công!');
+      toast.success('Employee deleted successfully!');
       loadData();
     } catch (error: any) {
       toast.error(error.message);
@@ -123,7 +155,7 @@ export const AdminDashboard: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4"></div>
-          <p className="text-gray-400">Đang tải dữ liệu...</p>
+          <p className="text-gray-400">Loading data...</p>
         </div>
       </div>
     );
@@ -142,7 +174,7 @@ export const AdminDashboard: React.FC = () => {
             Admin Dashboard
           </h1>
           <p className="text-gray-400">
-            Quản lý hệ thống và nhân viên
+            System and employee management
           </p>
         </motion.div>
 
@@ -157,7 +189,7 @@ export const AdminDashboard: React.FC = () => {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-blue-200 text-sm">Tổng Nhân Viên</p>
+                    <p className="text-blue-200 text-sm">Total Employees</p>
                     <p className="text-2xl font-bold text-white">{stats.total}</p>
                   </div>
                   <UsersIcon className="w-8 h-8 text-blue-400" />
@@ -175,7 +207,7 @@ export const AdminDashboard: React.FC = () => {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-green-200 text-sm">Đang Online</p>
+                    <p className="text-green-200 text-sm">Currently Online</p>
                     <p className="text-2xl font-bold text-white">{stats.online}</p>
                   </div>
                   <ChartIcon className="w-8 h-8 text-green-400" />
@@ -233,14 +265,14 @@ export const AdminDashboard: React.FC = () => {
             onClick={() => setActiveTab('users')}
           >
             <UsersIcon className="w-4 h-4 mr-2" />
-            Quản Lý Người Dùng
+            User Management
           </Button>
           <Button
             variant={activeTab === 'images' ? 'default' : 'outline'}
             onClick={() => setActiveTab('images')}
           >
             <ShieldIcon className="w-4 h-4 mr-2" />
-            Quản Lý Ảnh
+            Image Management
           </Button>
         </motion.div>
 
@@ -258,7 +290,7 @@ export const AdminDashboard: React.FC = () => {
                 <div className="relative">
                   <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <Input
-                    placeholder="Tìm kiếm nhân viên..."
+                    placeholder="Search employees..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10"
@@ -267,7 +299,7 @@ export const AdminDashboard: React.FC = () => {
               </div>
               <Button onClick={() => setShowAddUser(true)}>
                 <UsersIcon className="w-4 h-4 mr-2" />
-                Thêm Nhân Viên
+                Add Employee
               </Button>
             </motion.div>
 
@@ -279,19 +311,19 @@ export const AdminDashboard: React.FC = () => {
             >
               <Card>
                 <CardHeader>
-                  <h3 className="text-xl font-semibold text-white">Danh Sách Nhân Viên</h3>
+                  <h3 className="text-xl font-semibold text-white">Employee List</h3>
                 </CardHeader>
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-gray-700">
-                        <th className="text-left p-4 text-gray-300">Tên</th>
+                        <th className="text-left p-4 text-gray-300">Name</th>
                         <th className="text-left p-4 text-gray-300">Email</th>
-                        <th className="text-left p-4 text-gray-300">Chức Vụ</th>
-                        <th className="text-left p-4 text-gray-300">Phòng Ban</th>
-                        <th className="text-left p-4 text-gray-300">Vai Trò</th>
-                        <th className="text-left p-4 text-gray-300">Trạng Thái</th>
-                        <th className="text-left p-4 text-gray-300">Thao Tác</th>
+                        <th className="text-left p-4 text-gray-300">Position</th>
+                        <th className="text-left p-4 text-gray-300">Department</th>
+                        <th className="text-left p-4 text-gray-300">Role</th>
+                        <th className="text-left p-4 text-gray-300">Status</th>
+                        <th className="text-left p-4 text-gray-300">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -345,7 +377,7 @@ export const AdminDashboard: React.FC = () => {
                   
                   {filteredUsers.length === 0 && (
                     <div className="text-center py-8">
-                      <p className="text-gray-400">Không tìm thấy nhân viên nào</p>
+                      <p className="text-gray-400">No employees found</p>
                     </div>
                   )}
                 </div>
@@ -363,16 +395,16 @@ export const AdminDashboard: React.FC = () => {
         )}
 
         {/* Add User Modal */}
-        <Modal isOpen={showAddUser} onClose={() => setShowAddUser(false)} title="Thêm Nhân Viên Mới">
+        <Modal isOpen={showAddUser} onClose={() => setShowAddUser(false)} title="Add New Employee">
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Tên nhân viên
+                Employee Name
               </label>
               <Input
                 value={newUserData.username}
                 onChange={(e) => setNewUserData({...newUserData, username: e.target.value})}
-                placeholder="Nhập tên nhân viên"
+                placeholder="Enter employee name"
               />
             </div>
             
@@ -384,56 +416,56 @@ export const AdminDashboard: React.FC = () => {
                 type="email"
                 value={newUserData.email}
                 onChange={(e) => setNewUserData({...newUserData, email: e.target.value})}
-                placeholder="Nhập email"
+                placeholder="Enter email"
               />
             </div>
             
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Mật khẩu
+                Password
               </label>
               <Input
                 type="password"
                 value={newUserData.password}
                 onChange={(e) => setNewUserData({...newUserData, password: e.target.value})}
-                placeholder="Nhập mật khẩu"
+                placeholder="Enter password"
               />
             </div>
             
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Chức vụ
+                Position
               </label>
               <Input
                 value={newUserData.position}
                 onChange={(e) => setNewUserData({...newUserData, position: e.target.value})}
-                placeholder="Nhập chức vụ"
+                placeholder="Enter position"
               />
             </div>
             
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Phòng ban
+                Department
               </label>
               <Input
                 value={newUserData.department}
                 onChange={(e) => setNewUserData({...newUserData, department: e.target.value})}
-                placeholder="Nhập phòng ban"
+                placeholder="Enter department"
               />
             </div>
             
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Vai trò
+                Role
               </label>
               <select
                 value={newUserData.role}
                 onChange={(e) => setNewUserData({...newUserData, role: e.target.value as UserRole})}
                 className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-primary-500"
               >
-                <option value="staff">Staff</option>
-                <option value="department_admin">Department Admin</option>
-                <option value="admin">Admin</option>
+                <option value="staff" style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }}>Staff</option>
+                <option value="department_admin" style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }}>Department Admin</option>
+                <option value="admin" style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }}>Admin</option>
               </select>
             </div>
             
@@ -443,14 +475,14 @@ export const AdminDashboard: React.FC = () => {
                 onClick={() => setShowAddUser(false)}
                 className="flex-1"
               >
-                Hủy
+                Cancel
               </Button>
               <Button
                 onClick={handleAddUser}
                 className="flex-1"
                 disabled={!newUserData.username || !newUserData.email || !newUserData.password}
               >
-                Thêm Nhân Viên
+                Add Employee
               </Button>
             </div>
           </div>

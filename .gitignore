@@ -27,6 +27,12 @@ dist-ssr
 .env
 .env.local
 .env.production
+.env.vercel
 
 .vercel
 .env*.local
+
+# Firebase Admin SDK (contains private keys)
+*-firebase-adminsdk-*.json
+firebase-adminsdk-*.json
+enterprise-time-trackin-firebase-adminsdk-*.json

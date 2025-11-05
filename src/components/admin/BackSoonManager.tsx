@@ -32,7 +32,7 @@ export const BackSoonManager: React.FC = () => {
   }, [user]);
 
   const formatDate = (timestamp: number): string => {
-    return new Date(timestamp).toLocaleString('vi-VN', {
+    return new Date(timestamp).toLocaleString('en-US', {
       timeZone: 'Asia/Ho_Chi_Minh',
       day: '2-digit',
       month: '2-digit',
@@ -49,11 +49,11 @@ export const BackSoonManager: React.FC = () => {
   if (loading) {
     return (
       <Card>
-        <CardHeader title="Theo Dõi Back Soon" icon={<BackSoonIcon />} />
+        <CardHeader title="Back Soon Monitoring" icon={<BackSoonIcon />} />
         <div className="p-6">
           <div className="text-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500 mx-auto mb-4"></div>
-            <p className="text-gray-400">Đang tải...</p>
+            <p className="text-gray-400">Loading...</p>
           </div>
         </div>
       </Card>
@@ -70,7 +70,7 @@ export const BackSoonManager: React.FC = () => {
             <div className="text-3xl font-bold text-yellow-400 mb-2">
               {backSoonUsers.length}
             </div>
-            <p className="text-sm text-gray-400">Nhân viên đang Back Soon</p>
+            <p className="text-sm text-gray-400">Employees Back Soon</p>
           </div>
         </Card>
 
@@ -80,7 +80,7 @@ export const BackSoonManager: React.FC = () => {
             <div className="text-3xl font-bold text-green-400 mb-2">
               {onlineUsers.length}
             </div>
-            <p className="text-sm text-gray-400">Nhân viên đang Online</p>
+            <p className="text-sm text-gray-400">Employees Online</p>
           </div>
         </Card>
 
@@ -90,19 +90,19 @@ export const BackSoonManager: React.FC = () => {
             <div className="text-3xl font-bold text-gray-400 mb-2">
               {offlineUsers.length}
             </div>
-            <p className="text-sm text-gray-400">Nhân viên Offline</p>
+            <p className="text-sm text-gray-400">Employees Offline</p>
           </div>
         </Card>
       </div>
 
       {/* Back Soon Users */}
       <Card>
-        <CardHeader title="Nhân Viên Back Soon" icon={<BackSoonIcon />} />
+        <CardHeader title="Back Soon Employees" icon={<BackSoonIcon />} />
         <div className="p-6">
           {backSoonUsers.length === 0 ? (
             <div className="text-center py-8">
               <BackSoonIcon className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-              <p className="text-gray-400">Không có nhân viên nào đang Back Soon</p>
+              <p className="text-gray-400">No employees on Back Soon</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -119,7 +119,7 @@ export const BackSoonManager: React.FC = () => {
                       {user.faceImageUrl ? (
                         <img 
                           src={user.faceImageUrl} 
-                          alt={user.username}
+                          alt={user.fullName || user.username}
                           className="w-12 h-12 rounded-full object-cover border border-primary-500/30"
                           onError={(e) => {
                             const img = e.target as HTMLImageElement;
@@ -131,14 +131,14 @@ export const BackSoonManager: React.FC = () => {
                       <div className={`w-12 h-12 rounded-full ${user.faceImageUrl ? 'hidden' : 'bg-yellow-500/20'} flex items-center justify-center ${!user.faceImageUrl ? 'border border-primary-500/30' : ''}`}>
                         {user.faceImageUrl ? null : (
                           <>
-                            {user.username?.[0]?.toUpperCase() || (
+                            {(user.fullName || user.username)?.[0]?.toUpperCase() || (
                               <BackSoonIcon className="w-6 h-6 text-yellow-400" />
                             )}
                           </>
                         )}
                       </div>
                       <div>
-                        <p className="font-medium text-white">{user.username}</p>
+                        <p className="font-medium text-white">{user.fullName || user.username}</p>
                         <p className="text-sm text-gray-400">
                           {user.department} • {user.position}
                         </p>
@@ -160,7 +160,7 @@ export const BackSoonManager: React.FC = () => {
 
       {/* All Users Status */}
       <Card>
-        <CardHeader title="Trạng Thái Tất Cả Nhân Viên" icon={<UsersIcon />} />
+        <CardHeader title="All Employees Status" icon={<UsersIcon />} />
         <div className="p-6">
           <div className="space-y-3 max-h-[400px] overflow-y-auto">
             {users.map((user, index) => (

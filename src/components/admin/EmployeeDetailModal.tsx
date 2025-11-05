@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { User, Session, UserRole } from '@/types';
-import { getUserSessions, updateUser } from '@/services/userService';
-import { resetUserPasswordByAdmin } from '@/services/auth';
+import { getUserSessions, updateUser, deleteUser } from '@/services/userService';
+import { adminForceLogoutUser } from '@/services/sessionService';
 import { useAuthStore } from '@/store/authStore';
 import { Input } from '@/components/ui/Input';
 import toast from 'react-hot-toast';
-import { ClockIcon, EditIcon, XIcon } from '@/components/icons';
+import { ClockIcon, EditIcon, XIcon, TrashIcon, LogoutIcon } from '@/components/icons';
 
 interface EmployeeDetailModalProps {
   user: User | null;
@@ -24,10 +24,13 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [showPasswordReset, setShowPasswordReset] = useState(false);
-  const [newPassword, setNewPassword] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isForcingLogout, setIsForcingLogout] = useState(false);
   const [editData, setEditData] = useState({
     username: '',
+    fullName: '',
     email: '',
     department: '',
     position: '',
@@ -36,8 +39,14 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
 
   useEffect(() => {
     if (user) {
+      // Reset all form states when user changes
+      setEditing(false);
+      setIsUpdating(false);
+      
+      // Set editData to the new user's actual data
       setEditData({
         username: user.username,
+        fullName: user.fullName || '',
         email: user.email,
         department: user.department,
         position: user.position,
@@ -61,40 +70,26 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
   };
 
   const handleUpdate = async () => {
-    if (!user || !currentUser) return;
+    if (!user || !currentUser || isUpdating) return;
     
+    setIsUpdating(true);
     try {
       await updateUser(user.id, editData, currentUser);
-      toast.success('Cập nhật thông tin thành công!');
+      toast.success('Information updated successfully!');
       setEditing(false);
       onUpdate();
     } catch (error: any) {
       toast.error(error.message);
+    } finally {
+      setIsUpdating(false);
     }
   };
 
-  const handlePasswordReset = async () => {
-    if (!user || !currentUser) return;
-    
-    if (!newPassword || newPassword.length < 6) {
-      toast.error('Mật khẩu phải có ít nhất 6 ký tự');
-      return;
-    }
-    
-    try {
-      await resetUserPasswordByAdmin(user.id, newPassword);
-      toast.success('Đã cập nhật mật khẩu thành công!');
-      setNewPassword('');
-      setShowPasswordReset(false);
-    } catch (error: any) {
-      toast.error(error.message || 'Không thể cập nhật mật khẩu');
-    }
-  };
 
   const formatTime = (milliseconds?: number) => {
     if (!milliseconds) return 'N/A';
     const date = new Date(milliseconds);
-    return date.toLocaleString('vi-VN', {
+    return date.toLocaleString('en-US', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -131,13 +126,45 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
     return parts.length > 0 ? parts.join(' ') : '0s';
   };
 
+  const handleDelete = async () => {
+    if (!user || !currentUser || isDeleting) return;
+    
+    setIsDeleting(true);
+    try {
+      await deleteUser(user.id, currentUser);
+      toast.success('Employee deleted successfully!');
+      setShowDeleteConfirm(false);
+      onUpdate();
+      onClose();
+    } catch (error: any) {
+      toast.error(error.message);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleForceLogout = async () => {
+    if (!user || !currentUser || isForcingLogout) return;
+    
+    setIsForcingLogout(true);
+    try {
+      await adminForceLogoutUser(user.id, currentUser, 'Forced logout by admin');
+      toast.success('User logged out successfully!');
+      onUpdate();
+    } catch (error: any) {
+      toast.error(error.message);
+    } finally {
+      setIsForcingLogout(false);
+    }
+  };
+
   if (!user) return null;
 
   return (
     <Modal isOpen={!!user} onClose={onClose} size="lg">
       <div className="p-4">
         <div className="mb-4">
-          <h2 className="text-xl font-bold">Chi Tiết Nhân Viên</h2>
+          <h2 className="text-xl font-bold">Employee Details</h2>
         </div>
 
         {/* Employee Info */}
@@ -146,26 +173,41 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
             {user.faceImageUrl ? (
               <img
                 src={user.faceImageUrl}
-                alt={user.username}
+                alt={user.fullName || user.username}
                 className="w-16 h-16 rounded-full object-cover border border-primary-500/30"
               />
             ) : (
               <div className="w-16 h-16 rounded-full bg-primary-500/20 flex items-center justify-center text-primary-400 font-bold text-xl border border-primary-500/30">
-                {user.username?.[0]?.toUpperCase() || '?'}
+                {(user.fullName || user.username)?.[0]?.toUpperCase() || '?'}
               </div>
             )}
             <div className="flex-1">
               <div className="mb-2">
-                <label className="block text-xs text-gray-400 mb-1">Tên</label>
+                <label className="block text-xs text-gray-400 mb-1">Full Name</label>
+                {editing ? (
+                  <input
+                    type="text"
+                    value={editData.fullName}
+                    onChange={(e) => setEditData({ ...editData, fullName: e.target.value })}
+                    className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white text-sm"
+                    placeholder="Enter full name"
+                  />
+                ) : (
+                  <h3 className="text-lg font-bold">{user.fullName || user.username}</h3>
+                )}
+              </div>
+              <div className="mb-2">
+                <label className="block text-xs text-gray-400 mb-1">Username</label>
                 {editing ? (
                   <input
                     type="text"
                     value={editData.username}
                     onChange={(e) => setEditData({ ...editData, username: e.target.value })}
                     className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white text-sm"
+                    placeholder="Enter username"
                   />
                 ) : (
-                  <h3 className="text-lg font-bold">{user.username}</h3>
+                  <p className="text-gray-400 text-sm">{user.username}</p>
                 )}
               </div>
               <div>
@@ -186,15 +228,16 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
               variant="secondary"
               onClick={() => editing ? handleUpdate() : setEditing(true)}
               size="sm"
+              loading={isUpdating}
             >
               <EditIcon className="w-5 h-5 mr-2" />
-              {editing ? 'Lưu' : 'Sửa'}
+              {editing ? 'Save' : 'Edit'}
             </Button>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Phòng Ban</label>
+              <label className="block text-sm text-gray-400 mb-1">Department</label>
               {editing ? (
                 <input
                   type="text"
@@ -207,7 +250,7 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
               )}
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Chức Vụ</label>
+              <label className="block text-sm text-gray-400 mb-1">Position</label>
               {editing ? (
                 <input
                   type="text"
@@ -221,59 +264,26 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
             </div>
           </div>
 
-          {/* Password Reset Section */}
-          {editing && (
-            <div className="mt-4 pt-4 border-t border-dark-700">
-              <Button
-                variant="danger"
-                size="sm"
-                onClick={() => setShowPasswordReset(!showPasswordReset)}
-                className="w-full"
-              >
-                {showPasswordReset ? 'Hủy đổi mật khẩu' : 'Đổi mật khẩu'}
-              </Button>
-              
-              {showPasswordReset && (
-                <div className="mt-3 space-y-2">
-                  <Input
-                    type="password"
-                    label="Mật khẩu mới"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Nhập mật khẩu mới (tối thiểu 6 ký tự)"
-                  />
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={handlePasswordReset}
-                    className="w-full"
-                  >
-                    Xác nhận đổi mật khẩu
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
         {/* Work History */}
         <div>
           <h3 className="text-lg font-bold mb-3 flex items-center gap-2">
             <ClockIcon className="w-5 h-5" />
-            Lịch Sử Làm Việc
+            Work History
           </h3>
           
           {loading ? (
-            <div className="text-center py-6 text-gray-400">Đang tải...</div>
+            <div className="text-center py-6 text-gray-400">Loading...</div>
           ) : sessions.length === 0 ? (
-            <div className="text-center py-6 text-gray-400">Chưa có lịch sử làm việc</div>
+            <div className="text-center py-6 text-gray-400">No work history</div>
           ) : (
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {sessions.map((session) => {
                 // Get Back Soon reasons
                 const backSoonReasons = session.backSoonEvents?.map((event: any) => {
                   if (event.reason === 'meeting') return 'Meeting';
-                  if (event.reason === 'wc') return 'WC';
+                  if (event.reason === 'toilet') return 'Toilet';
                   if (event.reason === 'other') return event.customReason || 'Other';
                   return 'Unknown';
                 }).join(', ') || '';
@@ -314,7 +324,7 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
                         <p className="text-white">{formatTime(session.checkOutTime)}</p>
                       </div>
                       <div>
-                        <p className="text-gray-400">Thời Gian Online</p>
+                        <p className="text-gray-400">Online Time</p>
                         <p className="text-green-400">{formatDuration(displayOnlineTime)}</p>
                       </div>
                       <div>
@@ -324,7 +334,7 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
                     </div>
                     {backSoonReasons && (
                       <div className="mt-2 pt-2 border-t border-dark-700">
-                        <p className="text-xs text-gray-400">Lý do Back Soon:</p>
+                        <p className="text-xs text-gray-400">Back Soon Reason:</p>
                         <p className="text-xs text-yellow-400">{backSoonReasons}</p>
                       </div>
                     )}
@@ -334,7 +344,82 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
             </div>
           )}
         </div>
+
+        {/* Force Logout Button */}
+        {!editing && user.status === 'online' && (
+          <div className="mt-4 pt-4 border-t border-dark-700 flex justify-center">
+            <Button
+              variant="danger"
+              size="sm"
+              icon={<LogoutIcon />}
+              onClick={handleForceLogout}
+              loading={isForcingLogout}
+            >
+              Force Logout
+            </Button>
+          </div>
+        )}
+
+        {/* Delete User Button */}
+        {editing && (
+          <div className="mt-4 pt-4 border-t border-dark-700 flex justify-center">
+            <Button
+              variant="danger"
+              size="sm"
+              icon={<TrashIcon />}
+              onClick={() => setShowDeleteConfirm(true)}
+            >
+              Delete Employee
+            </Button>
+          </div>
+        )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        title="Confirm Employee Deletion"
+      >
+        <div className="space-y-6">
+          <div className="text-center">
+            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-red-500/20 flex items-center justify-center">
+              <TrashIcon className="w-10 h-10 text-red-500" />
+            </div>
+            <p className="text-lg text-gray-300 mb-2">
+              Are you sure you want to delete this employee?
+            </p>
+            <p className="text-sm text-gray-400 mb-1">
+              <span className="font-semibold text-white">{user?.username}</span>
+            </p>
+            <p className="text-sm text-gray-400">
+              ({user?.email})
+            </p>
+            <p className="text-xs text-red-400 mt-3">
+              ⚠️ This action cannot be undone!
+            </p>
+          </div>
+
+          <div className="flex gap-3">
+            <Button
+              variant="secondary"
+              onClick={() => setShowDeleteConfirm(false)}
+              className="flex-1"
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handleDelete}
+              className="flex-1"
+              loading={isDeleting}
+            >
+              Confirm Delete
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </Modal>
   );
 };

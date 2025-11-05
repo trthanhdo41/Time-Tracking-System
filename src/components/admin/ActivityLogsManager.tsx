@@ -72,7 +72,7 @@ export const ActivityLogsManager: React.FC = () => {
   }, [user]);
 
   const formatDate = (timestamp: number): string => {
-    return new Date(timestamp).toLocaleString('vi-VN', {
+    return new Date(timestamp).toLocaleString('en-US', {
       timeZone: 'Asia/Ho_Chi_Minh',
       day: '2-digit',
       month: '2-digit',
@@ -93,20 +93,24 @@ export const ActivityLogsManager: React.FC = () => {
       case 'delete_image_request': return 'text-orange-400';
       case 'account_created': return 'text-green-400';
       case 'account_deleted': return 'text-red-400';
+      case 'login': return 'text-cyan-400';
+      case 'logout': return 'text-orange-400';
       default: return 'text-gray-400';
     }
   };
 
   const getActionTypeLabel = (actionType: string): string => {
     switch (actionType) {
-      case 'check_in': return 'Check In';
-      case 'check_out': return 'Check Out';
+      case 'check_in': return 'Work Check-In';
+      case 'check_out': return 'Work Check-Out';
       case 'back_soon': return 'Back Soon';
       case 'face_verification': return 'Face Verification';
       case 'captcha': return 'CAPTCHA';
       case 'delete_image_request': return 'Delete Image Request';
       case 'account_created': return 'Account Created';
       case 'account_deleted': return 'Account Deleted';
+      case 'login': return 'System Login';
+      case 'logout': return 'System Logout';
       default: return actionType;
     }
   };
@@ -126,11 +130,11 @@ export const ActivityLogsManager: React.FC = () => {
   if (loading) {
     return (
       <Card>
-        <CardHeader title="Hoạt Động Hệ Thống" icon={<HistoryIcon />} />
+        <CardHeader title="System Activity" icon={<HistoryIcon />} />
         <div className="p-6">
           <div className="text-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500 mx-auto mb-4"></div>
-            <p className="text-gray-400">Đang tải...</p>
+            <p className="text-gray-400">Loading...</p>
           </div>
         </div>
       </Card>
@@ -139,14 +143,14 @@ export const ActivityLogsManager: React.FC = () => {
 
   return (
     <Card>
-      <CardHeader title="Hoạt Động Hệ Thống" icon={<HistoryIcon />} />
+      <CardHeader title="System Activity" icon={<HistoryIcon />} />
       <div className="p-6">
         {/* Filters */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <div>
             <Input
               type="text"
-              placeholder="Tìm kiếm..."
+              placeholder="Search..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               icon={<SearchIcon />}
@@ -158,7 +162,7 @@ export const ActivityLogsManager: React.FC = () => {
               onChange={(e) => setFilterDepartment(e.target.value)}
               className="input-field w-full"
             >
-              <option value="">Tất cả phòng ban</option>
+              <option value="">All Departments</option>
               {departments.map(dept => (
                 <option key={dept} value={dept}>{dept}</option>
               ))}
@@ -170,7 +174,7 @@ export const ActivityLogsManager: React.FC = () => {
               onChange={(e) => setFilterActionType(e.target.value)}
               className="input-field w-full"
             >
-              <option value="">Tất cả hành động</option>
+              <option value="">All Actions</option>
               {actionTypes.map(action => (
                 <option key={action} value={action}>{getActionTypeLabel(action)}</option>
               ))}
@@ -211,7 +215,7 @@ export const ActivityLogsManager: React.FC = () => {
         {filteredLogs.length === 0 ? (
           <div className="text-center py-8">
             <HistoryIcon className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-            <p className="text-gray-400">Không có hoạt động nào</p>
+            <p className="text-gray-400">No activity</p>
           </div>
         ) : (
           <div className="space-y-4 max-h-[600px] overflow-y-auto">

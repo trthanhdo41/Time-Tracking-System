@@ -48,7 +48,7 @@ export const ImageManagement: React.FC = () => {
       setRequests(pendingRequests);
     } catch (error) {
       console.error('Error loading pending requests:', error);
-      toast.error('Không thể tải danh sách yêu cầu xóa ảnh');
+      toast.error('Unable to load image deletion requests');
     } finally {
       setLoading(false);
     }
@@ -67,7 +67,7 @@ export const ImageManagement: React.FC = () => {
 
   const handleReject = async () => {
     if (!selectedRequest || !currentUser || !rejectReason.trim()) {
-      toast.error('Vui lòng nhập lý do từ chối');
+      toast.error('Please enter rejection reason');
       return;
     }
     
@@ -95,14 +95,14 @@ export const ImageManagement: React.FC = () => {
   };
 
   const formatTimestamp = (timestamp: number) => {
-    return new Date(timestamp).toLocaleString('vi-VN');
+    return new Date(timestamp).toLocaleString('en-US');
   };
 
   if (loading) {
     return (
       <div className="text-center py-8">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4"></div>
-        <p className="text-gray-400">Đang tải danh sách yêu cầu xóa ảnh...</p>
+        <p className="text-gray-400">Loading image deletion requests...</p>
       </div>
     );
   }
@@ -111,9 +111,9 @@ export const ImageManagement: React.FC = () => {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <h3 className="text-xl font-semibold text-white">Quản Lý Yêu Cầu Xóa Ảnh</h3>
+          <h3 className="text-xl font-semibold text-white">Manage Requests</h3>
           <p className="text-gray-400">
-            Có {requests.length} yêu cầu đang chờ phê duyệt
+            {requests.length} pending requests for approval
           </p>
         </CardHeader>
         
@@ -121,7 +121,7 @@ export const ImageManagement: React.FC = () => {
           {requests.length === 0 ? (
             <div className="text-center py-8">
               <div className="text-gray-400 mb-4">📷</div>
-              <p className="text-gray-400">Không có yêu cầu xóa ảnh nào đang chờ</p>
+              <p className="text-gray-400">No pending image deletion requests</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -149,16 +149,16 @@ export const ImageManagement: React.FC = () => {
                     <div className="lg:col-span-2 space-y-3">
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-medium text-gray-300">
-                          Yêu cầu từ: {request.userId}
+                          Request from: {request.userId}
                         </span>
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(request.status)}`}>
-                          {request.status === 'pending' ? 'Đang chờ' : 
-                           request.status === 'approved' ? 'Đã phê duyệt' : 'Đã từ chối'}
+                          {request.status === 'pending' ? 'Pending' : 
+                           request.status === 'approved' ? 'Approved' : 'Rejected'}
                         </span>
                       </div>
                       
                       <div>
-                        <span className="text-sm text-gray-400">Lý do yêu cầu:</span>
+                        <span className="text-sm text-gray-400">Request Reason:</span>
                         <p className="text-white mt-1">{request.reason}</p>
                       </div>
                       
@@ -176,7 +176,7 @@ export const ImageManagement: React.FC = () => {
                             className="flex-1 bg-green-500/20 border-green-500 text-green-400 hover:bg-green-500/30"
                           >
                             <CheckIcon className="w-4 h-4 mr-2" />
-                            Phê Duyệt
+                            Approve
                           </Button>
                           <Button
                             onClick={() => {
@@ -187,14 +187,14 @@ export const ImageManagement: React.FC = () => {
                             className="flex-1 text-red-400 border-red-400 hover:bg-red-400/10"
                           >
                             <XIcon className="w-4 h-4 mr-2" />
-                            Từ Chối
+                            Reject
                           </Button>
                         </div>
                       )}
                       
                       {request.status === 'rejected' && request.reviewerComment && (
                         <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3">
-                          <span className="text-sm text-red-400 font-medium">Lý do từ chối:</span>
+                          <span className="text-sm text-red-400 font-medium">Rejection Reason:</span>
                           <p className="text-red-300 mt-1">{request.reviewerComment}</p>
                         </div>
                       )}
@@ -215,17 +215,17 @@ export const ImageManagement: React.FC = () => {
           setSelectedRequest(null);
           setRejectReason('');
         }}
-        title="Từ Chối Yêu Cầu Xóa Ảnh"
+        title="Reject Image Deletion Request"
       >
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
-              Lý do từ chối:
+              Rejection Reason:
             </label>
             <Input
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
-              placeholder="Nhập lý do từ chối yêu cầu xóa ảnh..."
+              placeholder="Enter reason for rejecting deletion request..."
               className="w-full"
             />
           </div>
@@ -240,7 +240,7 @@ export const ImageManagement: React.FC = () => {
               }}
               className="flex-1"
             >
-              Hủy
+              Cancel
             </Button>
             <Button
               onClick={handleReject}
@@ -248,7 +248,7 @@ export const ImageManagement: React.FC = () => {
               className="flex-1 bg-red-500/20 border-red-500 text-red-400 hover:bg-red-500/30"
             >
               <XIcon className="w-4 h-4 mr-2" />
-              Từ Chối
+              Reject
             </Button>
           </div>
         </div>

@@ -17,6 +17,7 @@ export const ReportsManager: React.FC = () => {
   const [reportType, setReportType] = useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [selectedUserId, setSelectedUserId] = useState<string>(''); // Filter by performer
   const [users, setUsers] = useState<any[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [activityLogs, setActivityLogs] = useState<any[]>([]);
@@ -65,7 +66,7 @@ export const ReportsManager: React.FC = () => {
 
   const generateReport = async () => {
     if (!startDate || !endDate) {
-      alert('Vui lòng chọn ngày bắt đầu và kết thúc');
+      alert('Please select start and end dates');
       return;
     }
 
@@ -75,9 +76,16 @@ export const ReportsManager: React.FC = () => {
       const startTimestamp = new Date(startDate).getTime();
       const endTimestamp = new Date(endDate).getTime();
 
-      const filteredLogs = activityLogs.filter(log => 
+      let filteredLogs = activityLogs.filter(log => 
         log.timestamp >= startTimestamp && log.timestamp <= endTimestamp
       );
+
+      // Filter by performer if selected
+      if (selectedUserId) {
+        filteredLogs = filteredLogs.filter(log => 
+          log.userId === selectedUserId || log.performedBy === selectedUserId
+        );
+      }
 
       const reportData = {
         period: `${startDate} - ${endDate}`,
@@ -98,28 +106,47 @@ export const ReportsManager: React.FC = () => {
         }))
       };
 
+      // Get selected user info for report header
+      const selectedUser = selectedUserId ? users.find(u => u.id === selectedUserId) : null;
+      const performerFilterText = selectedUser ? `\nFiltered by Performer: ${selectedUser.username} (${selectedUser.department})` : '';
+
       // Generate CSV content
       const csvContent = [
-        ['Báo Cáo Hoạt Động Hệ Thống'],
-        [`Khoảng thời gian: ${reportData.period}`],
-        [`Tổng số nhân viên: ${reportData.totalUsers}`],
-        [`Tổng số hoạt động: ${reportData.totalActivities}`],
+        ['System Activity Report'],
+        [`Period: ${reportData.period}${performerFilterText}`],
+        [`Total Employees: ${reportData.totalUsers}`],
+        [`Total Activities: ${reportData.totalActivities}`],
         [`Check In: ${reportData.checkIns}`],
         [`Check Out: ${reportData.checkOuts}`],
         [`Back Soon: ${reportData.backSoon}`],
         [`Face Verification: ${reportData.faceVerifications}`],
         [`CAPTCHA: ${reportData.captchas}`],
-        [`Yêu cầu xóa ảnh: ${reportData.imageDeleteRequests}`],
+        [`Image Deletion Requests: ${reportData.imageDeleteRequests}`],
         [''],
-        ['Chi tiết hoạt động:'],
+        ['Activity Details:'],
         ['Timestamp', 'User', 'Department', 'Action', 'Description'],
-        ...filteredLogs.map(log => [
-          new Date(log.timestamp).toLocaleString('vi-VN'),
-          log.username,
-          log.department,
-          log.actionType,
-          log.description
-        ])
+        ...filteredLogs.map(log => {
+          // Try to get user info from log first, fallback to users array if needed
+          let userName = log.userName || log.username;
+          let department = log.userDepartment || log.department;
+          
+          // If still missing, try to find user from users array
+          if (log.userId && (!userName || !department)) {
+            const user = users.find(u => u.id === log.userId);
+            if (user) {
+              userName = userName || user.username || 'N/A';
+              department = department || user.department || 'N/A';
+            }
+          }
+          
+          return [
+            new Date(log.timestamp).toLocaleString('en-US'),
+            userName || 'N/A',
+            department || 'N/A',
+            log.actionType || 'N/A',
+            log.actionDetails || log.description || 'N/A'
+          ];
+        })
       ].map(row => row.join(',')).join('\n');
 
       // Download CSV
@@ -133,14 +160,14 @@ export const ReportsManager: React.FC = () => {
 
     } catch (error: any) {
       console.error('Error generating report:', error);
-      alert('Không thể tạo báo cáo');
+      alert('Unable to generate report');
     } finally {
       setLoading(false);
     }
   };
 
   const formatDate = (timestamp: number): string => {
-    return new Date(timestamp).toLocaleString('vi-VN', {
+    return new Date(timestamp).toLocaleString('en-US', {
       timeZone: 'Asia/Ho_Chi_Minh',
       day: '2-digit',
       month: '2-digit',
@@ -154,23 +181,23 @@ export const ReportsManager: React.FC = () => {
     <div className="space-y-6">
       {/* Report Configuration */}
       <Card>
-        <CardHeader title="Tạo Báo Cáo" icon={<ReportIcon />} />
+        <CardHeader title="Create Report" icon={<ReportIcon />} />
         <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <div>
-              <label className="block text-sm text-gray-400 mb-2">Loại báo cáo</label>
+              <label className="block text-sm text-gray-400 mb-2">Report Type</label>
               <select
                 value={reportType}
                 onChange={(e) => setReportType(e.target.value as any)}
                 className="input-field w-full"
               >
-                <option value="daily">Báo cáo ngày</option>
-                <option value="weekly">Báo cáo tuần</option>
-                <option value="monthly">Báo cáo tháng</option>
+                <option value="daily" style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }}>Daily Report</option>
+                <option value="weekly" style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }}>Weekly Report</option>
+                <option value="monthly" style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }}>Monthly Report</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-2">Ngày bắt đầu</label>
+              <label className="block text-sm text-gray-400 mb-2">Start Date</label>
               <Input
                 type="date"
                 value={startDate}
@@ -178,12 +205,27 @@ export const ReportsManager: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-2">Ngày kết thúc</label>
+              <label className="block text-sm text-gray-400 mb-2">End Date</label>
               <Input
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
               />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">Filter by Performer</label>
+              <select
+                value={selectedUserId}
+                onChange={(e) => setSelectedUserId(e.target.value)}
+                className="input-field w-full"
+              >
+                <option value="" style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }}>All Users</option>
+                {users.map((user) => (
+                  <option key={user.id} value={user.id} style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }}>
+                    {user.username} ({user.department})
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -194,20 +236,20 @@ export const ReportsManager: React.FC = () => {
             loading={loading}
             className="w-full"
           >
-            Tạo Báo Cáo CSV
+            Generate CSV Report
           </Button>
         </div>
       </Card>
 
       {/* Current Stats */}
       <Card>
-        <CardHeader title="Thống Kê Hiện Tại" icon={<ChartIcon />} />
+        <CardHeader title="Current Statistics" icon={<ChartIcon />} />
         <div className="p-6">
           {stats ? (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="text-center">
                 <div className="text-2xl font-bold text-primary-400">{stats.total}</div>
-                <div className="text-sm text-gray-400">Tổng nhân viên</div>
+                <div className="text-sm text-gray-400">Total Employees</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-green-400">{stats.online}</div>
@@ -225,7 +267,7 @@ export const ReportsManager: React.FC = () => {
           ) : (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500 mx-auto mb-4"></div>
-              <p className="text-gray-400">Đang tải thống kê...</p>
+              <p className="text-gray-400">Loading statistics...</p>
             </div>
           )}
         </div>
@@ -233,7 +275,7 @@ export const ReportsManager: React.FC = () => {
 
       {/* Recent Activities */}
       <Card>
-        <CardHeader title="Hoạt Động Gần Đây" icon={<HistoryIcon />} />
+        <CardHeader title="Recent Activities" icon={<HistoryIcon />} />
         <div className="p-6">
           <div className="space-y-3 max-h-[400px] overflow-y-auto">
             {activityLogs.slice(0, 10).map((log, index) => (

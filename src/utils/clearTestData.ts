@@ -5,7 +5,8 @@ import {
   deleteDoc, 
   doc,
   query,
-  writeBatch 
+  writeBatch,
+  getDoc
 } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 
@@ -21,7 +22,8 @@ export const clearAllTestData = async () => {
       'faceVerifications',
       'imageDeleteRequests',
       'notifications',
-      'errorReports'
+      'errorReports',
+      'forgotPasswordRequests'
     ];
     
     let totalDeleted = 0;
@@ -39,23 +41,20 @@ export const clearAllTestData = async () => {
         }
         
         // Delete in batches to avoid Firebase limits
-        const batch = writeBatch(db);
-        let batchCount = 0;
+        const docs = snapshot.docs;
+        const batchSize = 500; // Firebase batch limit
+        let processedCount = 0;
         
-        snapshot.docs.forEach((docSnapshot) => {
-          batch.delete(doc(db, collectionName, docSnapshot.id));
-          batchCount++;
+        for (let i = 0; i < docs.length; i += batchSize) {
+          const batch = writeBatch(db);
+          const batchDocs = docs.slice(i, Math.min(i + batchSize, docs.length));
           
-          // Firebase batch limit is 500 operations
-          if (batchCount >= 500) {
-            batch.commit();
-            batchCount = 0;
-          }
-        });
-        
-        // Commit remaining batch
-        if (batchCount > 0) {
+          batchDocs.forEach((docSnapshot) => {
+            batch.delete(doc(db, collectionName, docSnapshot.id));
+          });
+          
           await batch.commit();
+          processedCount += batchDocs.length;
         }
         
         console.log(`✅ Cleared ${snapshot.docs.length} documents from ${collectionName}`);
@@ -64,6 +63,23 @@ export const clearAllTestData = async () => {
       } catch (error) {
         console.error(`❌ Error clearing ${collectionName}:`, error);
       }
+    }
+    
+    // Delete Terms and Conditions document from systemSettings
+    try {
+      console.log('📋 Clearing Terms and Conditions...');
+      const termsDocRef = doc(db, 'systemSettings', 'termsAndConditions');
+      const termsDocSnap = await getDoc(termsDocRef);
+      
+      if (termsDocSnap.exists()) {
+        await deleteDoc(termsDocRef);
+        console.log('✅ Cleared Terms and Conditions document');
+        totalDeleted++;
+      } else {
+        console.log('✅ Terms and Conditions document does not exist');
+      }
+    } catch (error) {
+      console.error('❌ Error clearing Terms and Conditions:', error);
     }
     
     console.log(`🎉 Successfully cleared ${totalDeleted} documents from Firebase!`);
@@ -105,23 +121,20 @@ export const clearActivityAndImages = async () => {
         }
         
         // Delete in batches
-        const batch = writeBatch(db);
-        let batchCount = 0;
+        const docs = snapshot.docs;
+        const batchSize = 500; // Firebase batch limit
+        let processedCount = 0;
         
-        snapshot.docs.forEach((docSnapshot) => {
-          batch.delete(doc(db, collectionName, docSnapshot.id));
-          batchCount++;
+        for (let i = 0; i < docs.length; i += batchSize) {
+          const batch = writeBatch(db);
+          const batchDocs = docs.slice(i, Math.min(i + batchSize, docs.length));
           
-          // Firebase batch limit is 500 operations
-          if (batchCount >= 500) {
-            batch.commit();
-            batchCount = 0;
-          }
-        });
-        
-        // Commit remaining batch
-        if (batchCount > 0) {
+          batchDocs.forEach((docSnapshot) => {
+            batch.delete(doc(db, collectionName, docSnapshot.id));
+          });
+          
           await batch.commit();
+          processedCount += batchDocs.length;
         }
         
         console.log(`✅ Cleared ${snapshot.docs.length} documents from ${collectionName}`);

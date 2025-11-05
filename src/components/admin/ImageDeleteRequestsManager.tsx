@@ -41,7 +41,7 @@ export const ImageDeleteRequestsManager: React.FC = () => {
 
     try {
       await approveImageDeleteRequest(request.id, user);
-      toast.success('Đã phê duyệt yêu cầu xóa ảnh');
+      toast.success('Image deletion request approved');
     } catch (error: any) {
       toast.error(error.message);
     }
@@ -52,7 +52,7 @@ export const ImageDeleteRequestsManager: React.FC = () => {
 
     try {
       await rejectImageDeleteRequest(selectedRequest.id, rejectReason, user);
-      toast.success('Đã từ chối yêu cầu xóa ảnh');
+      toast.success('Image deletion request rejected');
       setShowRejectModal(false);
       setRejectReason('');
       setSelectedRequest(null);
@@ -62,7 +62,7 @@ export const ImageDeleteRequestsManager: React.FC = () => {
   };
 
   const formatDate = (timestamp: number): string => {
-    return new Date(timestamp).toLocaleString('vi-VN', {
+    return new Date(timestamp).toLocaleString('en-US', {
       timeZone: 'Asia/Ho_Chi_Minh',
       day: '2-digit',
       month: '2-digit',
@@ -75,11 +75,11 @@ export const ImageDeleteRequestsManager: React.FC = () => {
   if (loading) {
     return (
       <Card>
-        <CardHeader title="Duyệt Yêu Cầu Xóa Ảnh" icon={<ImageIcon />} />
+        <CardHeader title="Review Requests" icon={<ImageIcon />} />
         <div className="p-6">
           <div className="text-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500 mx-auto mb-4"></div>
-            <p className="text-gray-400">Đang tải...</p>
+            <p className="text-gray-400">Loading...</p>
           </div>
         </div>
       </Card>
@@ -88,12 +88,12 @@ export const ImageDeleteRequestsManager: React.FC = () => {
 
   return (
     <Card>
-      <CardHeader title="Duyệt Yêu Cầu Xóa Ảnh" icon={<ImageIcon />} />
+      <CardHeader title="Review Requests" icon={<ImageIcon />} />
       <div className="p-6">
         {requests.length === 0 ? (
           <div className="text-center py-8">
             <ImageIcon className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-            <p className="text-gray-400">Không có yêu cầu xóa ảnh nào</p>
+            <p className="text-gray-400">No image deletion requests</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -121,9 +121,9 @@ export const ImageDeleteRequestsManager: React.FC = () => {
                         {formatDate(request.requestedAt)}
                       </span>
                     </div>
-                    <p className="font-medium text-white mb-1">Yêu cầu xóa ảnh</p>
+                    <p className="font-medium text-white mb-1">Image Deletion Request</p>
                     <p className="text-sm text-gray-400 mb-2">
-                      <strong>Lý do:</strong> {request.reason}
+                      <strong>Reason:</strong> {request.reason}
                     </p>
                     <p className="text-xs text-gray-500">
                       ID: {request.id}
@@ -137,7 +137,7 @@ export const ImageDeleteRequestsManager: React.FC = () => {
                       icon={<CheckIcon />}
                       onClick={() => handleApprove(request)}
                     >
-                      Duyệt
+                      Approve
                     </Button>
                     <Button
                       variant="danger"
@@ -148,7 +148,7 @@ export const ImageDeleteRequestsManager: React.FC = () => {
                         setShowRejectModal(true);
                       }}
                     >
-                      Từ chối
+                      Reject
                     </Button>
                   </div>
                 </div>
@@ -166,16 +166,16 @@ export const ImageDeleteRequestsManager: React.FC = () => {
           setRejectReason('');
           setSelectedRequest(null);
         }}
-        title="Từ chối yêu cầu xóa ảnh"
+        title="Reject Image Deletion Request"
       >
         <div className="p-6">
           <p className="text-gray-400 mb-4">
-            Vui lòng nhập lý do từ chối:
+            Please enter reason for rejection:
           </p>
           
           <Input
             type="text"
-            placeholder="Lý do từ chối..."
+            placeholder="Reason for rejection..."
             value={rejectReason}
             onChange={(e) => setRejectReason(e.target.value)}
             className="mb-6"
@@ -191,7 +191,7 @@ export const ImageDeleteRequestsManager: React.FC = () => {
               }}
               className="flex-1"
             >
-              Hủy
+              Cancel
             </Button>
             <Button
               variant="danger"
@@ -199,7 +199,7 @@ export const ImageDeleteRequestsManager: React.FC = () => {
               disabled={!rejectReason.trim()}
               className="flex-1"
             >
-              Từ chối
+              Reject
             </Button>
           </div>
         </div>

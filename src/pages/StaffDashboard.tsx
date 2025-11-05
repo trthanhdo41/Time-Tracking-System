@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { useSessionStore } from '@/store/sessionStore';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { Modal } from '@/components/ui/Modal';
 import { CheckInCamera } from '@/components/staff/CheckInCamera';
 import { CaptchaModal } from '@/components/staff/CaptchaModal';
 import { BackSoonModal } from '@/components/staff/BackSoonModal';
@@ -28,6 +29,8 @@ import {
 import { listenToSystemSettings, SystemSettings } from '@/services/systemSettingsService';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/config/firebase';
+import { startActivityTracking } from '@/utils/activityTracker';
+import { startUserStatusTracking } from '@/utils/userStatusTracker';
 import toast from 'react-hot-toast';
 
 export const StaffDashboard: React.FC = () => {
@@ -38,6 +41,7 @@ export const StaffDashboard: React.FC = () => {
   const [showCaptcha, setShowCaptcha] = useState(false);
   const [showBackSoonModal, setShowBackSoonModal] = useState(false);
   const [showFaceVerification, setShowFaceVerification] = useState(false);
+  const [showCheckOutConfirm, setShowCheckOutConfirm] = useState(false);
   const [currentTime, setCurrentTime] = useState(getVietnamTimeString());
   const [activeTab, setActiveTab] = useState<'dashboard' | 'images'>('dashboard');
   const [showCheckInCamera, setShowCheckInCamera] = useState(false);
@@ -45,6 +49,8 @@ export const StaffDashboard: React.FC = () => {
   const [settings, setSettings] = useState<SystemSettings | null>(null);
   const [currentOnlineTime, setCurrentOnlineTime] = useState(0);
   const [currentBackSoonTime, setCurrentBackSoonTime] = useState(0);
+  const [captchaPassed, setCaptchaPassed] = useState(false); // Track if CAPTCHA has been passed in this session
+  const lastSessionIdRef = useRef<string | null>(null); // Track last session ID to detect new sessions
 
   // Handle URL parameters for tab
   useEffect(() => {
@@ -65,6 +71,9 @@ export const StaffDashboard: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
+  // Activity tracking cleanup ref
+  const activityCleanupRef = useRef<(() => void) | null>(null);
+
   // Listen to current session and check for inactivity
   useEffect(() => {
     if (!user) return;
@@ -73,8 +82,18 @@ export const StaffDashboard: React.FC = () => {
       useSessionStore.getState().setSession(session);
       useSessionStore.getState().setStatus(session?.status || 'offline');
       
-      // Check if session is stale (inactive > 5 minutes)
+      // Start/stop activity tracking based on session
       if (session && session.status === 'online') {
+        // Start activity tracking when session is online
+        if (activityCleanupRef.current) {
+          activityCleanupRef.current(); // Cleanup previous tracking
+        }
+        activityCleanupRef.current = startActivityTracking(user.id, session.id);
+        
+        // Update user status tracking with sessionId
+        startUserStatusTracking(user.id, session.id);
+        
+        // Check if session is stale (inactive > 5 minutes)
         const lastActivityTime = session.lastActivityTime;
         if (lastActivityTime) {
           const now = Date.now();
@@ -90,13 +109,33 @@ export const StaffDashboard: React.FC = () => {
             checkOutSession(session.id, 'Auto cleanup - Inactive 5+ minutes', user);
             useSessionStore.getState().setSession(null);
             useSessionStore.getState().setStatus('offline');
-            toast.error('Đã tự động checkout do không hoạt động 5 phút');
+            
+            // Stop activity tracking
+            if (activityCleanupRef.current) {
+              activityCleanupRef.current();
+              activityCleanupRef.current = null;
+            }
+            
+            toast.error('Automatically checked out due to 5 minutes of inactivity');
           }
+        }
+      } else {
+        // Stop activity tracking when session is offline
+        if (activityCleanupRef.current) {
+          activityCleanupRef.current();
+          activityCleanupRef.current = null;
         }
       }
     });
     
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      // Cleanup activity tracking on unmount
+      if (activityCleanupRef.current) {
+        activityCleanupRef.current();
+        activityCleanupRef.current = null;
+      }
+    };
   }, [user]);
 
   // Fetch today's activity logs
@@ -163,7 +202,7 @@ export const StaffDashboard: React.FC = () => {
             checkOutSession(currentSession.id, 'Auto cleanup - Inactive 5+ minutes', user);
             useSessionStore.getState().setSession(null);
             useSessionStore.getState().setStatus('offline');
-            toast.error('Đã tự động checkout do không hoạt động 5 phút');
+            toast.error('Automatically checked out due to 5 minutes of inactivity');
           }
         }
       }
@@ -220,27 +259,68 @@ export const StaffDashboard: React.FC = () => {
     return () => clearInterval(interval);
   }, [currentSession, status]);
 
-  // CAPTCHA periodic trigger
+  // Reset captchaPassed when a new session starts (check-in) or when session ends
   useEffect(() => {
-    if (status === 'online' && settings) {
+    const currentSessionId = currentSession?.id || null;
+    
+    // Reset when session ends (check-out)
+    if (status === 'offline' || !currentSession) {
+      setCaptchaPassed(false);
+      lastSessionIdRef.current = null;
+    } else if (status === 'online' && currentSession && currentSessionId !== lastSessionIdRef.current) {
+      // Reset when starting a new session (sessionId changed means new check-in)
+      setCaptchaPassed(false);
+      lastSessionIdRef.current = currentSessionId;
+    }
+  }, [status, currentSession?.id]); // Watch sessionId to detect new sessions
+
+  // CAPTCHA trigger - only once per session
+  useEffect(() => {
+    // Only trigger CAPTCHA if:
+    // 1. User is online
+    // 2. Settings are loaded
+    // 3. CAPTCHA hasn't been passed yet in this session
+    if (status === 'online' && settings && !captchaPassed) {
       const intervalMs = settings.captcha.intervalMinutes * 60 * 1000;
       
-      const timer = setTimeout(() => {
-        // Play notification sound 5 seconds before
-        setTimeout(() => {
-          soundManager.playSuccess();
-        }, intervalMs - 5000);
-        
-        setShowCaptcha(true);
+      // Show notification + sound 15 seconds before CAPTCHA
+      const warningTimer = setTimeout(() => {
+        if (!captchaPassed && status === 'online') {
+          toast('CAPTCHA will appear in 15 seconds. Please prepare.', {
+            icon: '🔐',
+            duration: 4000,
+          });
+          soundManager.playCaptchaNotification(); // Play loud notification sound
+        }
+      }, intervalMs - 15000);
+      
+      // Play notification sound 5 seconds before
+      const soundTimer = setTimeout(() => {
+        if (!captchaPassed && status === 'online') {
+          soundManager.playCaptchaNotification();
+        }
+      }, intervalMs - 5000);
+      
+      // Show CAPTCHA modal
+      const captchaTimer = setTimeout(() => {
+        // Only show CAPTCHA if it hasn't been passed yet
+        if (!captchaPassed) {
+          setShowCaptcha(true);
+        }
       }, intervalMs);
       
-      return () => clearTimeout(timer);
+      return () => {
+        clearTimeout(warningTimer);
+        clearTimeout(soundTimer);
+        clearTimeout(captchaTimer);
+      };
     }
-  }, [status, currentSession, settings]);
+  }, [status, currentSession, settings, captchaPassed]);
 
   const handleCaptchaSuccess = async () => {
     setShowCaptcha(false);
-    toast.success('Xác thực thành công!');
+    setCaptchaPassed(true); // Mark CAPTCHA as passed - won't trigger again in this session
+    toast.success('Verification successful!');
     
     // Check if we need to trigger Face Verification
     if (currentSession && settings) {
@@ -259,22 +339,23 @@ export const StaffDashboard: React.FC = () => {
 
   const handleCaptchaFail = async () => {
     setShowCaptcha(false);
+    setCaptchaPassed(false); // Reset flag on fail (will checkout anyway)
     useSessionStore.getState().setSession(null);
     useSessionStore.getState().setStatus('offline');
   };
 
   const handleFaceVerificationSuccess = () => {
     setShowFaceVerification(false);
-    toast.success('Xác thực khuôn mặt thành công!');
+    toast.success('Face verification successful!');
     // Reset face verification count after successful verification
     // This will be handled in the session update
   };
 
   const handleFaceVerificationFail = () => {
     setShowFaceVerification(false);
-    useSessionStore.getState().setSession(null);
-    useSessionStore.getState().setStatus('offline');
-    toast.error('Xác thực khuôn mặt thất bại. Đã tự động check-out.');
+    // DO NOT auto checkout immediately - wait for 5 minutes inactivity timeout
+    // The inactivity check (lines 79-97) will handle auto checkout after 5 minutes
+    toast.error('Face verification failed. You will be checked out after 5 minutes of inactivity.');
   };
 
   const handleCaptchaTrigger = () => {
@@ -291,21 +372,22 @@ export const StaffDashboard: React.FC = () => {
     try {
       await checkOutSession(currentSession.id, 'User checkout', user);
       useSessionStore.getState().setSession(null);
-    useSessionStore.getState().setStatus('offline');
-      toast.success('Check Out thành công!');
+      useSessionStore.getState().setStatus('offline');
+      toast.success('Check Out successful!');
+      setShowCheckOutConfirm(false);
     } catch (error: any) {
       toast.error(error.message);
     }
   };
 
-  const handleBackSoon = async (reason?: 'meeting' | 'wc' | 'other', customReason?: string) => {
+  const handleBackSoon = async (reason?: 'meeting' | 'toilet' | 'other', customReason?: string) => {
     if (!user || !currentSession) return;
     
     try {
       if (status === 'back_soon') {
         // Return to online
         await updateSessionBackOnline(currentSession.id, user);
-        toast.success('Đã trở lại làm việc!');
+        toast.success('Back to work!');
       } else if (reason) {
         // Go back soon - construct the reason text
         let reasonText = reason;
@@ -334,7 +416,7 @@ export const StaffDashboard: React.FC = () => {
             >
               <div className="text-center">
                 <h1 className="text-4xl md:text-5xl font-bold">
-                  Xin chào, <span className="gradient-text">{user?.username}</span>
+                  Welcome, <span className="gradient-text">{user?.fullName || user?.username}</span>
                 </h1>
                 <p className="text-gray-400 text-lg mt-1">
                   {user?.position} - {user?.department}
@@ -374,7 +456,7 @@ export const StaffDashboard: React.FC = () => {
                   variant="danger"
                   size="lg"
                   icon={<CheckOutIcon />}
-                  onClick={handleCheckOut}
+                  onClick={() => setShowCheckOutConfirm(true)}
                   className="flex-1 min-w-[150px]"
                 >
                   Check Out
@@ -392,7 +474,7 @@ export const StaffDashboard: React.FC = () => {
                   }}
                   className="flex-1 min-w-[150px]"
                 >
-                  {status === 'back_soon' ? 'Trở Lại Làm Việc' : 'Back Soon'}
+                  {status === 'back_soon' ? 'Return to Work' : 'Back Soon'}
                 </Button>
               </>
             )}
@@ -404,7 +486,7 @@ export const StaffDashboard: React.FC = () => {
               onClick={() => navigate('/history')}
               className="flex-1 min-w-[150px]"
             >
-              Lịch Sử
+              History
             </Button>
             
             <Button
@@ -424,7 +506,7 @@ export const StaffDashboard: React.FC = () => {
               onClick={() => navigate('/images')}
               className="flex-1 min-w-[150px]"
             >
-              Thư Viện Ảnh
+              Image Gallery
             </Button>
             
             </div>
@@ -436,13 +518,13 @@ export const StaffDashboard: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <Card gradient>
               <CardHeader 
-                title="Thời Gian Online" 
+                title="Online Time" 
                 icon={<ChartIcon className="w-6 h-6" />}
               />
               <div className="text-3xl font-bold text-primary-400 font-mono">
                 {formatDuration(currentOnlineTime)}
               </div>
-              <p className="text-sm text-gray-400 mt-2">Thời gian làm việc thực tế</p>
+              <p className="text-sm text-gray-400 mt-2">Actual work time</p>
             </Card>
 
             <Card gradient>
@@ -453,7 +535,7 @@ export const StaffDashboard: React.FC = () => {
               <div className="text-3xl font-bold text-yellow-400 font-mono">
                 {formatDuration(currentBackSoonTime)}
               </div>
-              <p className="text-sm text-gray-400 mt-2">Thời gian tạm rời khỏi</p>
+              <p className="text-sm text-gray-400 mt-2">Temporary away time</p>
             </Card>
           </div>
         )}
@@ -466,8 +548,8 @@ export const StaffDashboard: React.FC = () => {
             {/* Today's Activity */}
             <Card>
               <CardHeader 
-                title="Hoạt Động Hôm Nay" 
-                subtitle="Theo dõi các hoạt động của bạn"
+                title="Today's Activity" 
+                subtitle="Track your activities"
               />
               <div className="space-y-3 max-h-[400px] overflow-y-auto">
                 {todayActivities.length > 0 ? (
@@ -504,7 +586,7 @@ export const StaffDashboard: React.FC = () => {
                             {activity.actionType?.replace(/_/g, ' ') || 'Activity'}
                           </p>
                           <p className="text-sm text-gray-400">
-                            {new Date(activity.timestamp).toLocaleTimeString('vi-VN')}
+                            {new Date(activity.timestamp).toLocaleTimeString('en-US')}
                           </p>
                           {activity.description && (
                             <p className="text-xs text-gray-500 mt-1">{activity.description}</p>
@@ -516,8 +598,8 @@ export const StaffDashboard: React.FC = () => {
                   ))
                 ) : (
                   <div className="text-center py-12 text-gray-500">
-                    <p>Chưa có hoạt động hôm nay</p>
-                    <p className="text-sm mt-2">Nhấn Check In để bắt đầu</p>
+                    <p>No activity today</p>
+                    <p className="text-sm mt-2">Press Check In to start</p>
                   </div>
                 )}
               </div>
@@ -559,6 +641,44 @@ export const StaffDashboard: React.FC = () => {
           }}
         />
       )}
+
+      {/* Check Out Confirmation Modal */}
+      <Modal
+        isOpen={showCheckOutConfirm}
+        onClose={() => setShowCheckOutConfirm(false)}
+        title="Confirm Check Out"
+      >
+        <div className="space-y-6">
+          <div className="text-center">
+            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-red-500/20 flex items-center justify-center">
+              <CheckOutIcon className="w-10 h-10 text-red-500" />
+            </div>
+            <p className="text-lg text-gray-300 mb-2">
+              Are you sure you want to Check Out?
+            </p>
+            <p className="text-sm text-gray-400">
+              Work time: <span className="text-primary-400 font-mono font-semibold">{formatDuration(currentOnlineTime)}</span>
+            </p>
+          </div>
+
+          <div className="flex gap-3">
+            <Button
+              variant="secondary"
+              onClick={() => setShowCheckOutConfirm(false)}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handleCheckOut}
+              className="flex-1"
+            >
+              Confirm Check Out
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
     </div>
   );

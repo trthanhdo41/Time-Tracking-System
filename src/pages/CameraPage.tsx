@@ -93,7 +93,7 @@ export const CameraPage: React.FC = () => {
       setCapturedImages(images);
     } catch (error) {
       console.error('Error loading images:', error);
-      toast.error('Không thể tải danh sách ảnh');
+      toast.error('Unable to load image list');
       setCapturedImages([]); // Set empty on error
     } finally {
       setLoading(false);
@@ -131,14 +131,14 @@ export const CameraPage: React.FC = () => {
         
         setIsCameraActive(true);
         console.log('✅ Camera started successfully, isCameraActive set to true');
-        toast.success('Camera đã bật');
+        toast.success('Camera activated');
       } else {
         console.error('❌ Video ref is null');
-        toast.error('Lỗi: Video element không tồn tại');
+        toast.error('Error: Video element does not exist');
       }
     } catch (error) {
       console.error('❌ Camera error:', error);
-      toast.error('Không thể truy cập camera: ' + (error as Error).message);
+      toast.error('Unable to access camera: ' + (error as Error).message);
       setIsCameraActive(false);
     }
   };
@@ -153,7 +153,7 @@ export const CameraPage: React.FC = () => {
 
   const handleDeleteRequest = async () => {
     if (!deleteReason.trim()) {
-      toast.error('Vui lòng nhập lý do xóa');
+      toast.error('Please enter reason for deletion');
       return;
     }
 
@@ -161,12 +161,12 @@ export const CameraPage: React.FC = () => {
 
     try {
       await createImageDeleteRequest(user.id, selectedImage, deleteReason, user);
-      toast.success('Yêu cầu xóa ảnh đã được gửi đến Admin');
+      toast.success('Image deletion request sent to Admin');
       setShowDeleteRequest(false);
       setSelectedImage(null);
       setDeleteReason('');
     } catch (error: any) {
-      toast.error(error.message || 'Không thể gửi yêu cầu');
+      toast.error(error.message || 'Unable to send request');
     }
   };
 
@@ -192,8 +192,8 @@ export const CameraPage: React.FC = () => {
             <CameraIcon className="w-8 h-8 text-primary-400" />
           </div>
           <div>
-            <h1 className="text-4xl font-bold gradient-text">Camera & Hình Ảnh</h1>
-            <p className="text-gray-400">Giám sát và quản lý hình ảnh của bạn</p>
+            <h1 className="text-4xl font-bold gradient-text">Camera & Images</h1>
+            <p className="text-gray-400">Monitor and manage your images</p>
           </div>
         </motion.div>
 
@@ -201,16 +201,30 @@ export const CameraPage: React.FC = () => {
           {/* Live Camera Feed */}
           <Card>
             <CardHeader 
-              title="Camera Trực Tiếp" 
+              title="Live Camera" 
               icon={<MonitorIcon />}
               action={
-                <Button
-                  variant={isCameraActive ? 'danger' : 'primary'}
-                  size="sm"
-                  onClick={isCameraActive ? stopCamera : startCamera}
-                >
-                  {isCameraActive ? 'Tắt' : 'Bật'} Camera
-                </Button>
+                <div className="flex gap-2">
+                  {isCameraActive && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => {
+                        stopCamera();
+                        setTimeout(() => startCamera(), 500);
+                      }}
+                    >
+                      Reconnect
+                    </Button>
+                  )}
+                  <Button
+                    variant={isCameraActive ? 'danger' : 'primary'}
+                    size="sm"
+                    onClick={isCameraActive ? stopCamera : startCamera}
+                  >
+                    {isCameraActive ? 'Turn Off' : 'Turn On'} Camera
+                  </Button>
+                </div>
               }
             />
 
@@ -222,6 +236,7 @@ export const CameraPage: React.FC = () => {
                 playsInline
                 muted
                 className={`w-full h-full object-cover ${!isCameraActive ? 'hidden' : ''}`}
+                style={{ transform: 'scaleX(-1)' }}
               />
               
               {/* Recording Indicator */}
@@ -241,16 +256,7 @@ export const CameraPage: React.FC = () => {
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="text-center">
                     <CameraIcon className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                    <p className="text-gray-400">Camera chưa được bật</p>
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      icon={<CameraIcon />}
-                      onClick={startCamera}
-                      className="mt-4"
-                    >
-                      Bật Camera
-                    </Button>
+                    <p className="text-gray-400">Camera is not active</p>
                   </div>
                 </div>
               )}
@@ -258,7 +264,7 @@ export const CameraPage: React.FC = () => {
 
             <div className="mt-4 glass p-4 rounded-xl">
               <p className="text-sm text-gray-400">
-                📹 Camera được sử dụng cho việc xác thực khuôn mặt và giám sát
+                📹 Camera is used for face verification and monitoring
               </p>
             </div>
           </Card>
@@ -266,21 +272,21 @@ export const CameraPage: React.FC = () => {
           {/* Captured Images */}
           <Card>
             <CardHeader 
-              title="Hình Ảnh Đã Chụp" 
+              title="Captured Images" 
               icon={<ImageIcon />}
-              subtitle="Chỉ có thể xem, không thể xóa trực tiếp"
+              subtitle="View only, cannot delete directly"
             />
 
             <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
               {loading ? (
                 <div className="text-center py-12">
-                  <p className="text-gray-400">Đang tải...</p>
+                  <p className="text-gray-400">Loading...</p>
                 </div>
               ) : capturedImages.length === 0 ? (
                 <div className="text-center py-12">
                   <ImageIcon className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                  <p className="text-gray-400">Chưa có hình ảnh nào</p>
-                  <p className="text-sm text-gray-500 mt-2">Hình ảnh sẽ được tự động chụp khi check-in</p>
+                  <p className="text-gray-400">No images yet</p>
+                  <p className="text-sm text-gray-500 mt-2">Images will be automatically captured during check-in</p>
                 </div>
               ) : capturedImages.map((image, index) => (
                 <motion.div
@@ -343,8 +349,8 @@ export const CameraPage: React.FC = () => {
       <Modal
         isOpen={!!selectedImage && !showDeleteRequest}
         onClose={() => setSelectedImage(null)}
-        title="Xem Hình Ảnh"
-        size="lg"
+        title="View Image"
+        size="md"
       >
         {selectedImage && (
           <div className="space-y-4">
@@ -359,7 +365,7 @@ export const CameraPage: React.FC = () => {
               onClick={() => setShowDeleteRequest(true)}
               className="w-full"
             >
-              Yêu Cầu Xóa Hình Ảnh
+              Request Deletion
             </Button>
           </div>
         )}
@@ -372,24 +378,24 @@ export const CameraPage: React.FC = () => {
           setShowDeleteRequest(false);
           setDeleteReason('');
         }}
-        title="Yêu Cầu Xóa Hình Ảnh"
+        title="Request Image Deletion"
         size="md"
       >
         <div className="space-y-4">
           <p className="text-gray-400">
-            Vui lòng nhập lý do xóa hình ảnh. Yêu cầu sẽ được gửi đến Admin để phê duyệt.
+            Please enter reason for deleting this image. Request will be sent to Admin for approval.
           </p>
 
           <textarea
             value={deleteReason}
             onChange={(e) => setDeleteReason(e.target.value)}
-            placeholder="Nhập lý do xóa..."
+            placeholder="Enter reason for deletion..."
             className="input-field w-full h-32 resize-none"
           />
 
           <div className="glass p-4 rounded-xl">
             <p className="text-sm text-yellow-400">
-              ⚠️ Hình ảnh chỉ được xóa sau khi Admin phê duyệt
+              ⚠️ Images will only be deleted after Admin approval
             </p>
           </div>
 
@@ -402,14 +408,14 @@ export const CameraPage: React.FC = () => {
               }}
               className="flex-1"
             >
-              Hủy
+              Cancel
             </Button>
             <Button
               variant="primary"
               onClick={handleDeleteRequest}
               className="flex-1"
             >
-              Gửi Yêu Cầu
+              Send Request
             </Button>
           </div>
         </div>
