@@ -81,11 +81,37 @@ export const formatDuration = (seconds: number): string => {
   return parts.length > 0 ? parts.join(' ') : '0s';
 };
 
+/**
+ * Get current timestamp in GMT+7 (Vietnam timezone)
+ * This ensures all timestamps are consistent regardless of user's local timezone
+ */
+export const getVietnamTimestamp = (): number => {
+  // Get current UTC time
+  const now = new Date();
+
+  // Convert to Vietnam timezone (GMT+7)
+  // Create a date string in Vietnam timezone
+  const vietnamTimeString = now.toLocaleString('en-US', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  });
+
+  // Parse the Vietnam time string back to timestamp
+  const vietnamDate = new Date(vietnamTimeString);
+  return vietnamDate.getTime();
+};
+
+/**
+ * @deprecated Use getVietnamTimestamp() instead for consistent GMT+7 timestamps
+ */
 export const getServerTimestamp = (): number => {
-  // Use Date.now() for immediate operations
-  // For critical operations (check-in/out), use Firebase serverTimestamp() 
-  // which will be set in the service layer
-  return Date.now();
+  return getVietnamTimestamp();
 };
 
 export const getVietnamTimeString = (timestamp?: number): string => {

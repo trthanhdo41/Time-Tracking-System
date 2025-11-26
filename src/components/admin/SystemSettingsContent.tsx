@@ -22,8 +22,11 @@ export const SystemSettingsContent: React.FC = () => {
   const [captchaInterval, setCaptchaInterval] = useState(30);
   const [captchaMaxAttempts, setCaptchaMaxAttempts] = useState(3);
   const [captchaTimeout, setCaptchaTimeout] = useState(180);
+  const [captchaWarning, setCaptchaWarning] = useState(15);
   const [faceCheckCount, setFaceCheckCount] = useState(3);
   const [faceSimilarity, setFaceSimilarity] = useState(0.7);
+  const [faceWarning, setFaceWarning] = useState(30);
+  const [faceTimeout, setFaceTimeout] = useState(180);
   const [autoLogout, setAutoLogout] = useState(true);
   const [sessionTimeout, setSessionTimeout] = useState(12);
   
@@ -40,6 +43,11 @@ export const SystemSettingsContent: React.FC = () => {
   const [motionMin, setMotionMin] = useState(2.0);
   const [motionMax, setMotionMax] = useState(8.0);
 
+  // Inactivity Detection state
+  const [inactivityEnabled, setInactivityEnabled] = useState(true);
+  const [inactivityMinutes, setInactivityMinutes] = useState(30);
+  const [minInteractionsPerHour, setMinInteractionsPerHour] = useState(10);
+
   // Listen to realtime settings
   useEffect(() => {
     const unsubscribe = listenToSystemSettings((newSettings) => {
@@ -49,8 +57,11 @@ export const SystemSettingsContent: React.FC = () => {
       setCaptchaInterval(newSettings.captcha.intervalMinutes);
       setCaptchaMaxAttempts(newSettings.captcha.maxAttempts);
       setCaptchaTimeout(newSettings.captcha.timeoutSeconds);
+      setCaptchaWarning(newSettings.captcha.warningBeforeSeconds || 15);
       setFaceCheckCount(newSettings.faceVerification.captchaCountBeforeFace);
       setFaceSimilarity(newSettings.faceVerification.similarityThreshold);
+      setFaceWarning(newSettings.faceVerification.warningBeforeSeconds || 30);
+      setFaceTimeout(newSettings.faceVerification.timeoutSeconds || 180);
       setAutoLogout(newSettings.general.autoLogoutEnabled);
       setSessionTimeout(newSettings.general.sessionTimeoutHours);
       
@@ -70,7 +81,14 @@ export const SystemSettingsContent: React.FC = () => {
         setMotionMin(newSettings.motionDetection.motionMin);
         setMotionMax(newSettings.motionDetection.motionMax);
       }
-      
+
+      // Inactivity Detection settings
+      if (newSettings.inactivity) {
+        setInactivityEnabled(newSettings.inactivity.enabled);
+        setInactivityMinutes(newSettings.inactivity.inactivityMinutes);
+        setMinInteractionsPerHour(newSettings.inactivity.minInteractionsPerHour);
+      }
+
       setLoading(false);
     });
 
@@ -88,10 +106,13 @@ export const SystemSettingsContent: React.FC = () => {
           intervalMinutes: captchaInterval,
           maxAttempts: captchaMaxAttempts,
           timeoutSeconds: captchaTimeout,
+          warningBeforeSeconds: captchaWarning,
         },
         faceVerification: {
           captchaCountBeforeFace: faceCheckCount,
           similarityThreshold: faceSimilarity,
+          warningBeforeSeconds: faceWarning,
+          timeoutSeconds: faceTimeout,
         },
         antiSpoofing: {
           enabled: antiSpoofingEnabled,
@@ -106,13 +127,22 @@ export const SystemSettingsContent: React.FC = () => {
           motionMin,
           motionMax,
         },
+        inactivity: {
+          enabled: inactivityEnabled,
+          inactivityMinutes,
+          minInteractionsPerHour,
+        },
         general: {
           autoLogoutEnabled: autoLogout,
           sessionTimeoutHours: sessionTimeout,
         },
       };
 
-      await updateSystemSettings(newSettings, user.username);
+      await updateSystemSettings(
+        newSettings,
+        user.username,
+        user.role === 'admin' ? 'admin' : 'department_admin'
+      );
       toast.success('Settings saved and synced to all clients!');
     } catch (error) {
       console.error('Error saving settings:', error);
@@ -124,15 +154,18 @@ export const SystemSettingsContent: React.FC = () => {
 
   const handleReset = () => {
     if (!settings) return;
-    
+
     setCaptchaInterval(settings.captcha.intervalMinutes);
     setCaptchaMaxAttempts(settings.captcha.maxAttempts);
     setCaptchaTimeout(settings.captcha.timeoutSeconds);
+    setCaptchaWarning(settings.captcha.warningBeforeSeconds || 15);
     setFaceCheckCount(settings.faceVerification.captchaCountBeforeFace);
     setFaceSimilarity(settings.faceVerification.similarityThreshold);
+    setFaceWarning(settings.faceVerification.warningBeforeSeconds || 30);
+    setFaceTimeout(settings.faceVerification.timeoutSeconds || 180);
     setAutoLogout(settings.general.autoLogoutEnabled);
     setSessionTimeout(settings.general.sessionTimeoutHours);
-    
+
     if (settings.antiSpoofing) {
       setAntiSpoofingEnabled(settings.antiSpoofing.enabled);
       setConfidenceThreshold(settings.antiSpoofing.confidenceThreshold);
@@ -141,13 +174,19 @@ export const SystemSettingsContent: React.FC = () => {
       setColorfulnessMin(settings.antiSpoofing.colorfulnessMin);
       setTextureScoreMax(settings.antiSpoofing.textureScoreMax);
     }
-    
+
     if (settings.motionDetection) {
       setMotionEnabled(settings.motionDetection.enabled);
       setMotionMin(settings.motionDetection.motionMin);
       setMotionMax(settings.motionDetection.motionMax);
     }
-    
+
+    if (settings.inactivity) {
+      setInactivityEnabled(settings.inactivity.enabled);
+      setInactivityMinutes(settings.inactivity.inactivityMinutes);
+      setMinInteractionsPerHour(settings.inactivity.minInteractionsPerHour);
+    }
+
     toast.success('Restored to default values');
   };
 
@@ -255,6 +294,23 @@ export const SystemSettingsContent: React.FC = () => {
                 Maximum time to complete CAPTCHA (recommended: 180s = 3 minutes)
               </p>
             </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Warning Before CAPTCHA (seconds)
+              </label>
+              <input
+                type="number"
+                min="5"
+                max="60"
+                value={captchaWarning}
+                onChange={(e) => setCaptchaWarning(parseInt(e.target.value) || 15)}
+                className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                Show notification before CAPTCHA appears (recommended: 15 seconds)
+              </p>
+            </div>
           </div>
         </motion.div>
 
@@ -305,11 +361,45 @@ export const SystemSettingsContent: React.FC = () => {
               </p>
             </div>
 
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Warning Before Face Verification (seconds)
+              </label>
+              <input
+                type="number"
+                min="5"
+                max="120"
+                value={faceWarning}
+                onChange={(e) => setFaceWarning(parseInt(e.target.value) || 30)}
+                className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                Show notification before Face Verification appears (recommended: 30 seconds)
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Face Verification Timeout (seconds)
+              </label>
+              <input
+                type="number"
+                min="60"
+                max="600"
+                value={faceTimeout}
+                onChange={(e) => setFaceTimeout(parseInt(e.target.value) || 180)}
+                className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                Maximum time allowed to complete Face Verification (recommended: 180 seconds / 3 minutes)
+              </p>
+            </div>
+
             <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
               <div className="flex items-start gap-2">
                 <WarningIcon className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
                 <p className="text-sm text-yellow-400">
-                  <strong>Note:</strong> Too high threshold may cause false negatives (rejecting correct person). 
+                  <strong>Note:</strong> Too high threshold may cause false negatives (rejecting correct person).
                   Test thoroughly before applying.
                 </p>
               </div>
@@ -518,6 +608,93 @@ export const SystemSettingsContent: React.FC = () => {
                     <li>Motion &lt; {motionMin}: Static image/photo on screen</li>
                     <li>Motion &gt; {motionMax}: Too much movement/video playback</li>
                     <li>Adjust carefully to avoid rejecting real people!</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Inactivity Detection Settings */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="bg-dark-800 rounded-xl p-6 border border-dark-700"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-bold flex items-center gap-2">
+              <svg className="w-6 h-6 text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Inactivity Detection
+            </h2>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <span className="text-sm text-gray-400">Enable</span>
+              <input
+                type="checkbox"
+                checked={inactivityEnabled}
+                onChange={(e) => setInactivityEnabled(e.target.checked)}
+                className="w-5 h-5 rounded border-dark-600 bg-dark-700 text-primary-500 focus:ring-2 focus:ring-primary-500"
+              />
+            </label>
+          </div>
+
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Inactivity Timeout (minutes)
+              </label>
+              <input
+                type="number"
+                min="5"
+                max="120"
+                step="5"
+                value={inactivityMinutes}
+                onChange={(e) => setInactivityMinutes(parseInt(e.target.value) || 30)}
+                disabled={!inactivityEnabled}
+                className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50"
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                Auto check-out after {inactivityMinutes} minutes of no activity
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Minimum Interactions Per Hour
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="100"
+                step="1"
+                value={minInteractionsPerHour}
+                onChange={(e) => setMinInteractionsPerHour(parseInt(e.target.value) || 10)}
+                disabled={!inactivityEnabled}
+                className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50"
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                At least {minInteractionsPerHour} clicks/keypresses per hour to be considered active
+              </p>
+            </div>
+
+            <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+              <p className="text-sm text-blue-400">
+                <strong>How it works:</strong> The system tracks user interactions (clicks, keypresses, mouse movements).
+                If activity falls below the threshold, the user will be automatically checked out.
+              </p>
+            </div>
+
+            <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
+              <div className="flex items-start gap-2">
+                <WarningIcon className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-yellow-400">
+                  <p><strong>Examples:</strong></p>
+                  <ul className="list-disc ml-4 mt-1 space-y-1">
+                    <li>30 minutes + 10 interactions/hour: Moderate monitoring</li>
+                    <li>15 minutes + 20 interactions/hour: Strict monitoring</li>
+                    <li>60 minutes + 5 interactions/hour: Relaxed monitoring</li>
                   </ul>
                 </div>
               </div>

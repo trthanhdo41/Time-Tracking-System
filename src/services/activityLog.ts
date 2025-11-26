@@ -1,6 +1,7 @@
 import { collection, addDoc, query, where, orderBy, getDocs, Timestamp } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { ActivityLog, ActionType, UserRole } from '@/types';
+import { getVietnamTimestamp } from '@/utils/time';
 
 export const logActivity = async (
   userId: string,
@@ -16,6 +17,7 @@ export const logActivity = async (
   metadata?: Record<string, any>
 ): Promise<void> => {
   try {
+    const vietnamTime = getVietnamTimestamp();
     const activityLog: any = {
       userId,
       userName,
@@ -24,7 +26,7 @@ export const logActivity = async (
       userPosition,
       actionType,
       actionDetails,
-      timestamp: Date.now(),
+      timestamp: vietnamTime, // Use Vietnam timezone (GMT+7)
       createdAt: Timestamp.now(),
     };
 

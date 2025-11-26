@@ -365,11 +365,27 @@ export const CheckInCamera: React.FC<CheckInCameraProps> = ({ onClose, onSuccess
         }
       }
       
-      // Upload to imgbb if configured
-      let face1Url = '';
-      if (isImageUploadConfigured()) {
+      // Only upload Face1 if user doesn't have it yet (first check-in)
+      let face1Url = user.face1Url || ''; // Use existing Face1 if available
+
+      if (!user.face1Url && isImageUploadConfigured()) {
+        // First check-in - upload and save Face1
         try {
-          face1Url = await uploadImageToImgbb(imageBlob, `checkin_${user.id}_${Date.now()}`);
+          toast.loading('Saving check-in image...', { id: 'upload-face1' });
+          face1Url = await uploadImageToImgbb(imageBlob, `${user.username}_face1_${Date.now()}`);
+          toast.dismiss('upload-face1');
+
+          // Save Face1 to user document
+          const { updateDoc, doc } = await import('firebase/firestore');
+          const { db } = await import('@/config/firebase');
+          const { getVietnamTimestamp } = await import('@/utils/time');
+
+          await updateDoc(doc(db, 'users', user.id), {
+            face1Url: face1Url,
+            updatedAt: getVietnamTimestamp()
+          });
+
+          console.log('✅ Face1 saved for first check-in');
         } catch (error) {
           console.error('Image upload error:', error);
           toast.error('Unable to upload image. Please try again.');
@@ -377,17 +393,14 @@ export const CheckInCamera: React.FC<CheckInCameraProps> = ({ onClose, onSuccess
           setStep('camera');
           return;
         }
+      } else if (user.face1Url) {
+        console.log('✅ Using existing Face1 - No upload needed');
       }
 
       // Create session (this already logs the activity in sessionService)
       const session = await createCheckInSession(user, face1Url);
       setSession(session);
       setStatus('online');
-
-      // Update user's face1Url if not set
-      if (!user.face1Url && face1Url) {
-        // TODO: Update user's face1Url in Firestore
-      }
 
       soundManager.playSuccess();
       setStep('success');

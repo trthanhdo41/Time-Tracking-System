@@ -10,6 +10,8 @@ import { useSessionStore } from '@/store/sessionStore';
 import { updateCaptchaAttempt, checkOutSession } from '@/services/sessionService';
 import { listenToSystemSettings, SystemSettings } from '@/services/systemSettingsService';
 import { logActivity } from '@/services/activityLog';
+import { db } from '@/config/firebase';
+import { collection, addDoc } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 
 interface CaptchaModalProps {
@@ -83,6 +85,23 @@ export const CaptchaModal: React.FC<CaptchaModalProps> = ({
   const handleTimeout = async () => {
     if (user && currentSession) {
       try {
+        // Create error report for admin
+        try {
+          await addDoc(collection(db, 'errorReports'), {
+            userId: user.id,
+            username: user.username,
+            department: user.department,
+            position: user.position,
+            type: 'captcha_timeout',
+            attempts: attempts,
+            timestamp: Date.now(),
+            status: 'pending',
+            description: `User failed to complete CAPTCHA within time limit (${settings?.captcha.timeoutSeconds || 180} seconds)`,
+          });
+        } catch (error) {
+          console.error('Error creating error report:', error);
+        }
+
         // Log activity before checkout
         await logActivity(
           user.id,
@@ -97,7 +116,7 @@ export const CaptchaModal: React.FC<CaptchaModalProps> = ({
           user.department,
           { reason: 'CAPTCHA timeout', sessionId: currentSession.id }
         );
-        
+
         await checkOutSession(currentSession.id, 'CAPTCHA timeout', user);
         useSessionStore.getState().setSession(null);
         useSessionStore.getState().setStatus('offline');
@@ -134,6 +153,23 @@ export const CaptchaModal: React.FC<CaptchaModalProps> = ({
 
       const maxAttempts = settings?.captcha.maxAttempts || 3;
       if (newAttempts >= maxAttempts) {
+        // Create error report for admin
+        try {
+          await addDoc(collection(db, 'errorReports'), {
+            userId: user.id,
+            username: user.username,
+            department: user.department,
+            position: user.position,
+            type: 'captcha_failed',
+            attempts: maxAttempts,
+            timestamp: Date.now(),
+            status: 'pending',
+            description: `User failed CAPTCHA verification ${maxAttempts} times during check-in`,
+          });
+        } catch (error) {
+          console.error('Error creating error report:', error);
+        }
+
         // Log activity before auto checkout
         await logActivity(
           user.id,
@@ -148,12 +184,12 @@ export const CaptchaModal: React.FC<CaptchaModalProps> = ({
           user.department,
           { reason: 'Failed CAPTCHA', attempts: maxAttempts, sessionId: currentSession.id }
         );
-        
+
         // Auto checkout
         await checkOutSession(currentSession.id, 'Failed CAPTCHA verification', user);
         useSessionStore.getState().setSession(null);
         useSessionStore.getState().setStatus('offline');
-        
+
         toast.error(`${maxAttempts} incorrect attempts! You have been checked out.`);
         soundManager.playError();
         setLoading(false);

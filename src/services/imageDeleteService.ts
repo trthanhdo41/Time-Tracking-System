@@ -1,12 +1,12 @@
-import { 
-  collection, 
-  doc, 
-  addDoc, 
-  updateDoc, 
+import {
+  collection,
+  doc,
+  addDoc,
+  updateDoc,
   getDoc,
-  getDocs, 
-  query, 
-  where, 
+  getDocs,
+  query,
+  where,
   orderBy,
   onSnapshot,
   deleteField
@@ -14,7 +14,9 @@ import {
 import { db } from '@/config/firebase';
 import { ImageDeleteRequest } from '@/types';
 import { logActivity } from './activityLog';
+import { logAdminActivity } from './adminActivityService';
 import toast from 'react-hot-toast';
+import { getVietnamTimestamp } from '@/utils/time';
 
 /**
  * Create a new image delete request
@@ -38,7 +40,7 @@ export const createImageDeleteRequest = async (
       imageUrl,
       reason,
       status: 'pending',
-      requestedAt: Date.now(),
+      requestedAt: getVietnamTimestamp(),
     };
 
     const docRef = await addDoc(collection(db, 'imageDeleteRequests'), requestData);
@@ -203,7 +205,7 @@ export const approveImageDeleteRequest = async (
     // Update request status to approved
     await updateDoc(doc(db, 'imageDeleteRequests', requestId), {
       status: 'approved',
-      reviewedAt: Date.now(),
+      reviewedAt: getVietnamTimestamp(),
       reviewedBy: adminUser.id,
       reviewerComment: 'Approved by admin - Image deleted'
     });
@@ -223,6 +225,17 @@ export const approveImageDeleteRequest = async (
       { requestId, imageUrl, deletedCount, action: 'approved_and_deleted' }
     );
 
+    // Log admin activity
+    await logAdminActivity({
+      adminUsername: adminUser.username,
+      adminRole: adminUser.role === 'admin' ? 'admin' : 'department_admin',
+      actionType: 'approve_image_delete',
+      actionDescription: `Approved image deletion request and deleted image from ${deletedCount} location(s)`,
+      targetUser: requestData.userId,
+      targetResource: requestId,
+      metadata: { imageUrl, deletedCount }
+    });
+
   } catch (error) {
     console.error('Error approving image delete request:', error);
     throw new Error('Unable to approve image deletion request');
@@ -240,7 +253,7 @@ export const rejectImageDeleteRequest = async (
   try {
     await updateDoc(doc(db, 'imageDeleteRequests', requestId), {
       status: 'rejected',
-      reviewedAt: Date.now(),
+      reviewedAt: getVietnamTimestamp(),
       reviewedBy: adminUser.id,
       reviewerComment: reason
     });
@@ -259,6 +272,20 @@ export const rejectImageDeleteRequest = async (
       adminUser.department,
       { requestId, action: 'rejected', reason }
     );
+
+    // Log admin activity
+    const requestDoc = await getDoc(doc(db, 'imageDeleteRequests', requestId));
+    const requestData = requestDoc.data() as ImageDeleteRequest;
+
+    await logAdminActivity({
+      adminUsername: adminUser.username,
+      adminRole: adminUser.role === 'admin' ? 'admin' : 'department_admin',
+      actionType: 'reject_image_delete',
+      actionDescription: `Rejected image deletion request - Reason: ${reason}`,
+      targetUser: requestData?.userId,
+      targetResource: requestId,
+      metadata: { reason }
+    });
 
   } catch (error) {
     console.error('Error rejecting image delete request:', error);

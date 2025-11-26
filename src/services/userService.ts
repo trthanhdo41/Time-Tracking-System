@@ -17,7 +17,9 @@ import {
 import { db, auth } from '@/config/firebase';
 import { User, UserRole, Session } from '@/types';
 import { logActivity } from './activityLog';
+import { logAdminActivity } from './adminActivityService';
 import { Timestamp } from 'firebase/firestore';
+import { getVietnamTimestamp } from '@/utils/time';
 
 /**
  * Get all users from Firestore
@@ -84,7 +86,8 @@ export const createNewUser = async (
     
     // Create user in Firebase Auth
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    
+
+    const vietnamTime = getVietnamTimestamp();
     const newUser: User = {
       id: userCredential.user.uid,
       username, // Username for login/forgot password
@@ -94,8 +97,8 @@ export const createNewUser = async (
       department,
       position,
       faceImageUrl, // Face0 - base face image
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
+      createdAt: vietnamTime,
+      updatedAt: vietnamTime,
       isActive: true,
       notificationsEnabled: true,
     };
@@ -116,6 +119,17 @@ export const createNewUser = async (
       performedBy.role,
       performedBy.department
     );
+
+    // Log admin activity
+    await logAdminActivity({
+      adminUsername: performedBy.username,
+      adminRole: performedBy.role === 'admin' ? 'admin' : 'department_admin',
+      actionType: 'create_user',
+      actionDescription: `Created new ${role} account for ${username}`,
+      targetUser: username,
+      targetResource: newUser.id,
+      metadata: { email, department, position, role }
+    });
 
     // IMPORTANT: Firebase limitation - createUserWithEmailAndPassword automatically signs in the new user
     // Solution: Sign out the new user immediately, then automatically re-login admin
@@ -182,6 +196,17 @@ export const deleteUser = async (userId: string, performedBy: User): Promise<voi
       performedBy.role,
       performedBy.department
     );
+
+    // Log admin activity
+    await logAdminActivity({
+      adminUsername: performedBy.username,
+      adminRole: performedBy.role === 'admin' ? 'admin' : 'department_admin',
+      actionType: 'delete_user',
+      actionDescription: `Deleted user account: ${userData.username}`,
+      targetUser: userData.username,
+      targetResource: userId,
+      metadata: { deletedUserRole: userData.role, department: userData.department }
+    });
   } catch (error) {
     console.error('Error deleting user:', error);
     throw new Error('Unable to delete user');
@@ -227,6 +252,17 @@ export const updateUser = async (
       performedBy.role,
       performedBy.department
     );
+
+    // Log admin activity
+    await logAdminActivity({
+      adminUsername: performedBy.username,
+      adminRole: performedBy.role === 'admin' ? 'admin' : 'department_admin',
+      actionType: 'update_user',
+      actionDescription: `Updated user information: ${changes}`,
+      targetUser: userData.username,
+      targetResource: userId,
+      metadata: { changes: updates }
+    });
   } catch (error) {
     console.error('Error updating user:', error);
     throw new Error('Unable to update user information');

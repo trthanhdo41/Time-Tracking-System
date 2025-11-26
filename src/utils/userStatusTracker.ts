@@ -1,32 +1,27 @@
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/config/firebase';
-import { checkOutSession } from '@/services/sessionService';
+import { getVietnamTimestamp } from '@/utils/time';
 
 let heartbeatInterval: NodeJS.Timeout | null = null;
 let currentUserId: string | null = null;
 let currentSessionId: string | null = null;
-let visibilityHiddenTime: number | null = null;
-let tabHiddenCheckoutTimer: NodeJS.Timeout | null = null;
 
 // Heartbeat only runs when tab is visible
 const HEARTBEAT_INTERVAL = 15000; // 15 seconds when visible
-const TAB_HIDDEN_CHECKOUT_TIMEOUT = 30000; // Auto checkout after 30 seconds of tab hidden
 
 export const startUserStatusTracking = (userId: string, sessionId?: string) => {
   // Clear any existing interval
   if (heartbeatInterval) {
     clearInterval(heartbeatInterval);
   }
-  
-  if (tabHiddenCheckoutTimer) {
-    clearTimeout(tabHiddenCheckoutTimer);
-  }
-  
+
   currentUserId = userId;
   currentSessionId = sessionId || null;
-  
-  // Update status to online immediately
-  updateUserStatus(userId, 'online');
+
+  // Only update status to online if user has an active session (checked in)
+  if (sessionId) {
+    updateUserStatus(userId, 'online');
+  }
   
   // Start heartbeat only if tab is visible
   const startHeartbeat = () => {
@@ -35,22 +30,20 @@ export const startUserStatusTracking = (userId: string, sessionId?: string) => {
     }
     
     heartbeatInterval = setInterval(async () => {
-      // Only heartbeat if tab is visible
-      if (document.visibilityState === 'visible' && currentUserId) {
+      // Only heartbeat if tab is visible and user has active session
+      if (document.visibilityState === 'visible' && currentUserId && currentSessionId) {
         try {
-          const now = Date.now();
+          const now = getVietnamTimestamp();
           await updateDoc(doc(db, 'users', currentUserId), {
             lastActivityAt: now,
             status: 'online'
           });
-          
+
           // Also update session lastActivityTime
-          if (currentSessionId) {
-            await updateDoc(doc(db, 'sessions', currentSessionId), {
-              lastActivityTime: now
-            });
-          }
-          
+          await updateDoc(doc(db, 'sessions', currentSessionId), {
+            lastActivityTime: now
+          });
+
           console.log(`Heartbeat updated for user ${currentUserId}`);
         } catch (error) {
           console.error('Error updating user heartbeat:', error);
@@ -76,28 +69,30 @@ export const startUserStatusTracking = (userId: string, sessionId?: string) => {
   const handleBeforeUnload = () => {
     if (currentUserId) {
       try {
-        // Mark last activity as very old so cleanup service picks it up immediately
-        const veryOldTime = Date.now() - (10 * 60 * 1000); // 10 minutes ago
-        
+        const now = getVietnamTimestamp();
+
         // Use synchronous operation to ensure it runs before page closes
-        navigator.sendBeacon && navigator.sendBeacon('/api/logout', JSON.stringify({ 
-          userId: currentUserId, 
-          sessionId: currentSessionId 
+        navigator.sendBeacon && navigator.sendBeacon('/api/logout', JSON.stringify({
+          userId: currentUserId,
+          sessionId: currentSessionId
         }));
-        
+
         // Also try direct update (may not complete but worth trying)
+        // IMPORTANT: Keep lastActivityTime accurate (current time) for correct online time calculation
+        // Add needsCleanup flag to trigger cleanup service immediately
         if (currentSessionId) {
           updateDoc(doc(db, 'sessions', currentSessionId), {
-            lastActivityTime: veryOldTime
+            lastActivityTime: now,
+            needsCleanup: true
           }).catch(() => {
             // Ignore errors - cleanup service will handle it
           });
         }
-        
+
         updateDoc(doc(db, 'users', currentUserId), {
           status: 'offline',
-          lastActivityAt: veryOldTime,
-          lastLogoutAt: Date.now()
+          lastActivityAt: now,
+          lastLogoutAt: now
         }).catch(() => {
           // Ignore errors - cleanup service will handle it
         });
@@ -109,77 +104,39 @@ export const startUserStatusTracking = (userId: string, sessionId?: string) => {
 
   window.addEventListener('beforeunload', handleBeforeUnload);
 
-  // Add visibility change listener - improved handling
+  // Add visibility change listener - only control heartbeat, no auto checkout
   const handleVisibilityChange = async () => {
     if (!currentUserId) return;
-    
+
     if (document.visibilityState === 'hidden') {
-      // Tab is hidden - stop heartbeat and set offline after timeout
+      // Tab is hidden - stop heartbeat to save resources
+      // DO NOT checkout or set offline - user may just minimize or switch tabs
       stopHeartbeat();
-      visibilityHiddenTime = Date.now();
-      
-      // Set user status to offline immediately when tab is hidden
-      try {
-        await updateDoc(doc(db, 'users', currentUserId), {
-          status: 'offline',
-          lastLogoutAt: Date.now()
-        });
-      } catch (error) {
-        console.error('Error updating status on tab hide:', error);
-      }
-      
-      // Auto checkout session after timeout if tab stays hidden
-      if (tabHiddenCheckoutTimer) {
-        clearTimeout(tabHiddenCheckoutTimer);
-      }
-      
-      tabHiddenCheckoutTimer = setTimeout(async () => {
-        if (currentSessionId && currentUserId && document.visibilityState === 'hidden') {
-          try {
-            // Check if session is still active before checking out
-            const { getDoc } = await import('firebase/firestore');
-            const sessionDoc = await getDoc(doc(db, 'sessions', currentSessionId));
-            
-            if (sessionDoc.exists() && sessionDoc.data()?.status !== 'offline') {
-              const { getCurrentUser } = await import('@/services/auth');
-              const user = await getCurrentUser(currentUserId);
-              if (user) {
-                await checkOutSession(currentSessionId, 'Tab hidden for 30+ seconds', user);
-                console.log('Auto checked out session due to tab hidden for 30+ seconds');
-              }
-            } else {
-              console.log(`Session ${currentSessionId} already checked out. Skipping tab hidden checkout.`);
-            }
-          } catch (error) {
-            console.error('Error auto checking out session:', error);
-          }
-        }
-      }, TAB_HIDDEN_CHECKOUT_TIMEOUT);
-      
+      console.log('Tab hidden - heartbeat paused');
+
     } else if (document.visibilityState === 'visible') {
-      // Tab is visible again - resume heartbeat and set online
-      if (tabHiddenCheckoutTimer) {
-        clearTimeout(tabHiddenCheckoutTimer);
-        tabHiddenCheckoutTimer = null;
-      }
-      
-      visibilityHiddenTime = null;
+      // Tab is visible again - resume heartbeat
       startHeartbeat();
-      
-      try {
-        await updateDoc(doc(db, 'users', currentUserId), {
-          status: 'online',
-          lastActivityAt: Date.now()
-        });
-        
-        // Also update session lastActivityTime
-        if (currentSessionId) {
-          await updateDoc(doc(db, 'sessions', currentSessionId), {
-            lastActivityTime: Date.now()
+      console.log('Tab visible - heartbeat resumed');
+
+      // Update lastActivityTime when tab becomes visible again
+      if (currentSessionId) {
+        try {
+          const now = getVietnamTimestamp();
+
+          // Update user activity
+          await updateDoc(doc(db, 'users', currentUserId), {
+            lastActivityAt: now,
+            status: 'online'
           });
+
+          // Update session activity
+          await updateDoc(doc(db, 'sessions', currentSessionId), {
+            lastActivityTime: now
+          });
+        } catch (error) {
+          console.error('Error updating activity on tab show:', error);
         }
-      } catch (error) {
-        console.error('Error updating status on tab show:', error);
       }
     }
   };
@@ -192,26 +149,21 @@ export const stopUserStatusTracking = async (userId: string) => {
     clearInterval(heartbeatInterval);
     heartbeatInterval = null;
   }
-  
-  if (tabHiddenCheckoutTimer) {
-    clearTimeout(tabHiddenCheckoutTimer);
-    tabHiddenCheckoutTimer = null;
-  }
-  
+
   currentUserId = null;
   currentSessionId = null;
-  visibilityHiddenTime = null;
-  
+
   // Update status to offline
   await updateUserStatus(userId, 'offline');
 };
 
 export const updateUserStatus = async (userId: string, status: 'online' | 'offline' | 'back_soon') => {
   try {
+    const now = getVietnamTimestamp();
     await updateDoc(doc(db, 'users', userId), {
       status,
-      lastActivityAt: Date.now(),
-      ...(status === 'offline' && { lastLogoutAt: Date.now() })
+      lastActivityAt: now,
+      ...(status === 'offline' && { lastLogoutAt: now })
     });
   } catch (error) {
     console.error('Error updating user status:', error);

@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { StatusBadge } from '@/components/ui/StatusBadge';
-import { XIcon, DownloadIcon, ImageIcon } from '@/components/icons';
+import { XIcon, ImageIcon } from '@/components/icons';
 import { db } from '@/config/firebase';
 import { collection, query, getDocs, orderBy, updateDoc, doc } from 'firebase/firestore';
 import { useAuthStore } from '@/store/authStore';
@@ -21,12 +20,17 @@ interface ErrorReport {
   timestamp: number;
   status: string;
   description: string;
+  checkInTime?: number;
+  checkOutTime?: number;
+  totalOnlineTime?: number;
+  inactiveMinutes?: number;
 }
 
 export const ErrorReportsManager: React.FC = () => {
   const { user } = useAuthStore();
   const [reports, setReports] = useState<ErrorReport[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filterType, setFilterType] = useState<string>('all'); // 'all', 'verification', 'checkout'
 
   useEffect(() => {
     if (!user) return;
@@ -67,6 +71,17 @@ export const ErrorReportsManager: React.FC = () => {
     });
   };
 
+  const getErrorTypeLabel = (type: string): string => {
+    const typeLabels: Record<string, string> = {
+      'face_verification_failed': 'Face Verification Failed',
+      'captcha_failed': 'CAPTCHA Failed',
+      'captcha_timeout': 'CAPTCHA Timeout',
+      'checkout_tab_closed': 'Checkout - Tab Closed',
+      'checkout_auto_inactive': 'Checkout - Auto Inactive',
+    };
+    return typeLabels[type] || type;
+  };
+
   const handleResolve = async (reportId: string) => {
     try {
       await updateDoc(doc(db, 'errorReports', reportId), {
@@ -79,6 +94,21 @@ export const ErrorReportsManager: React.FC = () => {
       toast.error('Unable to update status');
     }
   };
+
+  // Filter reports based on selected type
+  const filteredReports = reports.filter(report => {
+    if (filterType === 'all') return true;
+    if (filterType === 'verification') {
+      return report.type === 'face_verification_failed' ||
+             report.type === 'captcha_failed' ||
+             report.type === 'captcha_timeout';
+    }
+    if (filterType === 'checkout') {
+      return report.type === 'checkout_tab_closed' ||
+             report.type === 'checkout_auto_inactive';
+    }
+    return true;
+  });
 
   if (loading) {
     return (
@@ -129,18 +159,40 @@ export const ErrorReportsManager: React.FC = () => {
         </Card>
       </div>
 
+      {/* Filter Tabs */}
+      <div className="flex gap-4">
+        <Button
+          variant={filterType === 'all' ? 'primary' : 'secondary'}
+          onClick={() => setFilterType('all')}
+        >
+          All Reports ({reports.length})
+        </Button>
+        <Button
+          variant={filterType === 'verification' ? 'primary' : 'secondary'}
+          onClick={() => setFilterType('verification')}
+        >
+          Verification Errors ({reports.filter(r => r.type === 'face_verification_failed' || r.type === 'captcha_failed' || r.type === 'captcha_timeout').length})
+        </Button>
+        <Button
+          variant={filterType === 'checkout' ? 'primary' : 'secondary'}
+          onClick={() => setFilterType('checkout')}
+        >
+          Checkout Errors ({reports.filter(r => r.type === 'checkout_tab_closed' || r.type === 'checkout_auto_inactive').length})
+        </Button>
+      </div>
+
       {/* Reports List */}
               <Card>
           <CardHeader title="Error Reports List" icon={<XIcon />} />
         <div className="p-6">
-          {reports.length === 0 ? (
+          {filteredReports.length === 0 ? (
             <div className="text-center py-8">
               <XIcon className="w-16 h-16 text-gray-600 mx-auto mb-4" />
               <p className="text-gray-400">No error reports</p>
             </div>
           ) : (
             <div className="space-y-4 max-h-[600px] overflow-y-auto">
-              {reports.map((report, index) => (
+              {filteredReports.map((report, index) => (
                 <motion.div
                   key={report.id}
                   initial={{ opacity: 0, y: 20 }}
@@ -150,11 +202,11 @@ export const ErrorReportsManager: React.FC = () => {
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-start gap-4 flex-1">
-                      {/* Failed Image */}
-                      {report.failedImageUrl && (
+                      {/* Failed Image or Icon */}
+                      {report.failedImageUrl ? (
                         <div className="relative group">
-                          <img 
-                            src={report.failedImageUrl} 
+                          <img
+                            src={report.failedImageUrl}
                             alt="Failed check-in"
                             className="w-24 h-24 rounded-lg object-cover border border-red-500/30 cursor-pointer hover:border-red-500/50 transition"
                             onClick={() => window.open(report.failedImageUrl, '_blank')}
@@ -162,6 +214,10 @@ export const ErrorReportsManager: React.FC = () => {
                           <div className="absolute inset-0 bg-red-500/20 opacity-0 group-hover:opacity-100 transition rounded-lg flex items-center justify-center">
                             <ImageIcon className="w-8 h-8 text-white" />
                           </div>
+                        </div>
+                      ) : (
+                        <div className="w-24 h-24 rounded-lg bg-red-500/10 border border-red-500/30 flex items-center justify-center">
+                          <XIcon className="w-12 h-12 text-red-500" />
                         </div>
                       )}
                       
@@ -174,17 +230,30 @@ export const ErrorReportsManager: React.FC = () => {
                         </div>
                         
                         <p className="text-white mb-2">{report.description}</p>
-                        
+
                         <div className="flex items-center gap-4 text-sm text-gray-400">
-                          <span><strong>Type:</strong> {report.type}</span>
-                          <span><strong>Attempts:</strong> {report.attempts}</span>
+                          <span><strong>Type:</strong> {getErrorTypeLabel(report.type)}</span>
+                          {(report.type === 'checkout_tab_closed' || report.type === 'checkout_auto_inactive') ? (
+                            <>
+                              <span><strong>Inactive:</strong> {report.inactiveMinutes || 0} min</span>
+                              <span><strong>Online:</strong> {Math.floor((report.totalOnlineTime || 0) / 60)} min</span>
+                            </>
+                          ) : (
+                            <span><strong>Attempts:</strong> {report.attempts}</span>
+                          )}
                           <span><strong>Time:</strong> {formatDate(report.timestamp)}</span>
                         </div>
                       </div>
                     </div>
 
                     <div className="flex flex-col items-end gap-2">
-                      <StatusBadge status={report.status === 'pending' ? 'warning' : 'success'} />
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                        report.status === 'pending'
+                          ? 'bg-yellow-500/20 text-yellow-400'
+                          : 'bg-green-500/20 text-green-400'
+                      }`}>
+                        {report.status === 'pending' ? 'Pending' : 'Resolved'}
+                      </span>
                       {report.status === 'pending' && (
                         <Button
                           variant="primary"

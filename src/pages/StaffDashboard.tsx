@@ -30,7 +30,7 @@ import { listenToSystemSettings, SystemSettings } from '@/services/systemSetting
 import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { startActivityTracking } from '@/utils/activityTracker';
-import { startUserStatusTracking } from '@/utils/userStatusTracker';
+import { startUserStatusTracking, stopUserStatusTracking } from '@/utils/userStatusTracker';
 import toast from 'react-hot-toast';
 
 export const StaffDashboard: React.FC = () => {
@@ -126,6 +126,9 @@ export const StaffDashboard: React.FC = () => {
           activityCleanupRef.current();
           activityCleanupRef.current = null;
         }
+
+        // Ensure user status is offline when no active session
+        stopUserStatusTracking(user.id);
       }
     });
     
@@ -284,32 +287,37 @@ export const StaffDashboard: React.FC = () => {
     }
     
     const intervalMs = settings.captcha.intervalMinutes * 60 * 1000;
-    
-    // Show notification + sound 15 seconds before CAPTCHA
+    const warningSeconds = settings.captcha.warningBeforeSeconds || 15;
+    const warningMs = warningSeconds * 1000;
+
+    // Show notification + sound before CAPTCHA (based on settings)
     const warningTimer = setTimeout(() => {
       if (status === 'online') {
-        toast('CAPTCHA will appear in 15 seconds. Please prepare.', {
+        toast(`CAPTCHA will appear in ${warningSeconds} seconds. Please prepare.`, {
           icon: '🔐',
           duration: 4000,
         });
         soundManager.playCaptchaNotification();
       }
-    }, intervalMs - 15000);
-    
-    // Play notification sound 5 seconds before
-    const soundTimer = setTimeout(() => {
-      if (status === 'online') {
-        soundManager.playCaptchaNotification();
-      }
-    }, intervalMs - 5000);
-    
+    }, intervalMs - warningMs);
+
+    // Play notification sound 5 seconds before (if warning time > 5 seconds)
+    let soundTimer: NodeJS.Timeout | null = null;
+    if (warningSeconds > 5) {
+      soundTimer = setTimeout(() => {
+        if (status === 'online') {
+          soundManager.playCaptchaNotification();
+        }
+      }, intervalMs - 5000);
+    }
+
     // Show CAPTCHA modal
     const captchaTimer = setTimeout(() => {
       if (status === 'online') {
         setShowCaptcha(true);
       }
     }, intervalMs);
-    
+
     captchaTimersRef.current = {
       warning: warningTimer,
       sound: soundTimer,
@@ -389,13 +397,30 @@ export const StaffDashboard: React.FC = () => {
     if (currentSession && settings) {
       const requiredCaptchas = settings.faceVerification.captchaCountBeforeFace;
       const currentCount = currentSession.captchaSuccessCount || 0;
-      
-      
+
+
       // Trigger face verification after N successful CAPTCHAs
       if ((currentCount + 1) >= requiredCaptchas) {
+        const warningSeconds = settings.faceVerification.warningBeforeSeconds || 30;
+
+        // Show warning notification
+        toast(`Face Verification will appear in ${warningSeconds} seconds. Please prepare.`, {
+          icon: '👤',
+          duration: 4000,
+        });
+        soundManager.playCaptchaNotification();
+
+        // Play sound again 5 seconds before (if warning time > 5 seconds)
+        if (warningSeconds > 5) {
+          setTimeout(() => {
+            soundManager.playCaptchaNotification();
+          }, (warningSeconds - 5) * 1000);
+        }
+
+        // Show Face Verification modal after warning time
         setTimeout(() => {
           setShowFaceVerification(true);
-        }, 1000); // Small delay for UX
+        }, warningSeconds * 1000);
       }
     }
 
@@ -420,11 +445,21 @@ export const StaffDashboard: React.FC = () => {
     // This will be handled in the session update
   };
 
-  const handleFaceVerificationFail = () => {
+  const handleFaceVerificationFail = async () => {
     setShowFaceVerification(false);
-    // DO NOT auto checkout immediately - wait for 5 minutes inactivity timeout
-    // The inactivity check (lines 79-97) will handle auto checkout after 5 minutes
-    toast.error('Face verification failed. You will be checked out after 5 minutes of inactivity.');
+
+    // Checkout immediately when Face Verification fails or is skipped
+    if (user && currentSession) {
+      try {
+        await checkOutSession(currentSession.id, 'Face Verification failed/skipped', user);
+        useSessionStore.getState().setSession(null);
+        useSessionStore.getState().setStatus('offline');
+        toast.error('Face verification failed. You have been checked out.');
+      } catch (error: any) {
+        console.error('Error checking out after face verification fail:', error);
+        toast.error('Error during checkout. Please try again.');
+      }
+    }
   };
 
   const handleCaptchaTrigger = () => {

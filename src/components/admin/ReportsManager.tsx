@@ -3,17 +3,19 @@ import { motion } from 'framer-motion';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { ReportIcon, DownloadIcon, HistoryIcon, UsersIcon, ChartIcon } from '@/components/icons';
+import { ReportIcon, DownloadIcon, HistoryIcon, UsersIcon, ChartIcon, ShieldIcon } from '@/components/icons';
 import { getAllUsers, getUserStats } from '@/services/userService';
 import { getAllActivityLogs } from '@/services/activityLog';
 import { useAuthStore } from '@/store/authStore';
 import { formatDuration } from '@/utils/time';
 import { db } from '@/config/firebase';
 import { doc, getDoc } from 'firebase/firestore';
+import { AdminActivityLogs } from '@/components/reports/AdminActivityLogs';
 
 export const ReportsManager: React.FC = () => {
   const { user } = useAuthStore();
   const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'system' | 'admin'>('system');
   const [reportType, setReportType] = useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -149,12 +151,22 @@ export const ReportsManager: React.FC = () => {
         })
       ].map(row => row.join(',')).join('\n');
 
-      // Download CSV
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      // Download CSV with English filename
+      const reportTypeNames: Record<string, string> = {
+        daily: 'Daily',
+        weekly: 'Weekly',
+        monthly: 'Monthly'
+      };
+      const dateStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+      const filename = `${reportTypeNames[reportType]}_Report_${dateStr}.csv`;
+
+      // Add BOM for UTF-8 encoding (helps Excel recognize special characters)
+      const BOM = '\uFEFF';
+      const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `bao_cao_${reportType}_${new Date().toISOString().split('T')[0]}.csv`;
+      a.download = filename;
       a.click();
       window.URL.revokeObjectURL(url);
 
@@ -179,10 +191,31 @@ export const ReportsManager: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Report Configuration */}
-      <Card>
-        <CardHeader title="Create Report" icon={<ReportIcon />} />
-        <div className="p-6">
+      {/* Tabs */}
+      <div className="flex gap-2 mb-6">
+        <Button
+          variant={activeTab === 'system' ? 'default' : 'outline'}
+          onClick={() => setActiveTab('system')}
+        >
+          <ChartIcon className="w-4 h-4 mr-2" />
+          System Reports
+        </Button>
+        <Button
+          variant={activeTab === 'admin' ? 'default' : 'outline'}
+          onClick={() => setActiveTab('admin')}
+        >
+          <ShieldIcon className="w-4 h-4 mr-2" />
+          Admin Activity Logs
+        </Button>
+      </div>
+
+      {/* System Reports Tab */}
+      {activeTab === 'system' && (
+        <>
+          {/* Report Configuration */}
+          <Card>
+            <CardHeader title="Create Report" icon={<ReportIcon />} />
+            <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <div>
               <label className="block text-sm text-gray-400 mb-2">Report Type</label>
@@ -319,6 +352,13 @@ export const ReportsManager: React.FC = () => {
           </div>
         </div>
       </Card>
+        </>
+      )}
+
+      {/* Admin Activity Logs Tab */}
+      {activeTab === 'admin' && (
+        <AdminActivityLogs />
+      )}
     </div>
   );
 };

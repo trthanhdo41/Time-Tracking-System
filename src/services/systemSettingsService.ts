@@ -1,15 +1,19 @@
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/config/firebase';
+import { logAdminActivity } from './adminActivityService';
 
 export interface SystemSettings {
   captcha: {
     intervalMinutes: number;
     maxAttempts: number;
     timeoutSeconds: number;
+    warningBeforeSeconds: number; // Warning notification before CAPTCHA appears
   };
   faceVerification: {
     captchaCountBeforeFace: number;
     similarityThreshold: number;
+    warningBeforeSeconds: number; // Warning notification before Face Verification
+    timeoutSeconds: number; // Timeout for Face Verification modal
   };
   antiSpoofing: {
     enabled: boolean;
@@ -23,6 +27,11 @@ export interface SystemSettings {
     enabled: boolean;
     motionMin: number; // default 2.0
     motionMax: number; // default 8.0
+  };
+  inactivity: {
+    enabled: boolean;
+    inactivityMinutes: number; // Minutes of inactivity before auto check-out
+    minInteractionsPerHour: number; // Minimum interactions (clicks/keypress) per hour to be considered active
   };
   general: {
     autoLogoutEnabled: boolean;
@@ -40,10 +49,13 @@ export const getDefaultSettings = (): SystemSettings => ({
     intervalMinutes: parseInt(import.meta.env.VITE_CAPTCHA_INTERVAL_MINUTES || '30'),
     maxAttempts: parseInt(import.meta.env.VITE_CAPTCHA_MAX_ATTEMPTS || '3'),
     timeoutSeconds: parseInt(import.meta.env.VITE_CAPTCHA_TIMEOUT_SECONDS || '180'),
+    warningBeforeSeconds: 15, // Default: 15 seconds warning before CAPTCHA
   },
   faceVerification: {
     captchaCountBeforeFace: parseInt(import.meta.env.VITE_CAPTCHA_COUNT_BEFORE_FACE || '3'),
     similarityThreshold: parseFloat(import.meta.env.VITE_FACE_VERIFICATION_SIMILARITY_THRESHOLD || '0.7'),
+    warningBeforeSeconds: 30, // Default: 30 seconds warning before Face Verification
+    timeoutSeconds: 180, // Default: 180 seconds (3 minutes) timeout for Face Verification
   },
   antiSpoofing: {
     enabled: true,
@@ -57,6 +69,11 @@ export const getDefaultSettings = (): SystemSettings => ({
     enabled: true,
     motionMin: 2.0,
     motionMax: 8.0,
+  },
+  inactivity: {
+    enabled: true,
+    inactivityMinutes: 30, // Default: 30 minutes of inactivity before auto check-out
+    minInteractionsPerHour: 10, // Default: at least 10 interactions per hour to be considered active
   },
   general: {
     autoLogoutEnabled: true,
@@ -88,17 +105,28 @@ export const getSystemSettings = async (): Promise<SystemSettings> => {
 // Update settings (Admin only)
 export const updateSystemSettings = async (
   settings: Partial<SystemSettings>,
-  updatedBy: string
+  updatedBy: string,
+  adminRole?: 'admin' | 'department_admin'
 ): Promise<void> => {
   try {
     const settingsRef = doc(db, 'systemSettings', SETTINGS_DOC_ID);
-    
+
     await setDoc(settingsRef, {
       ...settings,
       updatedAt: Date.now(),
       updatedBy,
     }, { merge: true });
-    
+
+    // Log admin activity
+    const sections = Object.keys(settings).filter(key => key !== 'updatedAt' && key !== 'updatedBy');
+    await logAdminActivity({
+      adminUsername: updatedBy,
+      adminRole: adminRole || 'admin',
+      actionType: 'update_system_settings',
+      actionDescription: `Updated system settings: ${sections.join(', ')}`,
+      metadata: { sections, changes: settings }
+    });
+
   } catch (error) {
     console.error('Error updating system settings:', error);
     throw error;

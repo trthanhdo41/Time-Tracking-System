@@ -48,10 +48,10 @@ class SoundManager {
 
   // Notification sound for face verification (before 5 minutes)
   playFaceVerifyNotification(): void {
-    // Play a two-tone alert
-    setTimeout(() => this.createBeep(800, 0.2, 0.25), 0);
-    setTimeout(() => this.createBeep(600, 0.2, 0.25), 200);
-    setTimeout(() => this.createBeep(800, 0.3, 0.25), 400);
+    // Play a two-tone alert with louder volume
+    setTimeout(() => this.createBeep(800, 0.2, 0.7), 0);
+    setTimeout(() => this.createBeep(600, 0.2, 0.7), 200);
+    setTimeout(() => this.createBeep(800, 0.3, 0.7), 400);
   }
 
   // Success sound
@@ -64,21 +64,21 @@ class SoundManager {
 
     notes.forEach(note => {
       setTimeout(() => {
-        this.createBeep(note.freq, 0.1, 0.15);
+        this.createBeep(note.freq, 0.1, 0.5); // Increased from 0.15 to 0.5
       }, note.time * 1000);
     });
   }
 
   // Error sound
   playError(): void {
-    setTimeout(() => this.createBeep(300, 0.2, 0.2), 0);
-    setTimeout(() => this.createBeep(250, 0.3, 0.2), 150);
+    setTimeout(() => this.createBeep(300, 0.2, 0.7), 0); // Increased from 0.2 to 0.7
+    setTimeout(() => this.createBeep(250, 0.3, 0.7), 150); // Increased from 0.2 to 0.7
   }
 
   // Warning sound
   playWarning(): void {
-    setTimeout(() => this.createBeep(440, 0.15, 0.2), 0);
-    setTimeout(() => this.createBeep(440, 0.15, 0.2), 200);
+    setTimeout(() => this.createBeep(440, 0.15, 0.7), 0); // Increased from 0.2 to 0.7
+    setTimeout(() => this.createBeep(440, 0.15, 0.7), 200); // Increased from 0.2 to 0.7
   }
 }
 

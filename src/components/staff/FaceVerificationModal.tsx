@@ -28,21 +28,46 @@ export const FaceVerificationModal: React.FC<FaceVerificationModalProps> = ({
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<'camera' | 'processing' | 'success' | 'error'>('camera');
   const [error, setError] = useState('');
+  const [timeLeft, setTimeLeft] = useState(180); // Default 180 seconds
+  const [timeoutSeconds, setTimeoutSeconds] = useState(180);
 
   useEffect(() => {
     if (isOpen) {
+      // Load timeout from system settings
+      const loadSettings = async () => {
+        try {
+          const { getSystemSettings } = await import('@/services/systemSettingsService');
+          const settings = await getSystemSettings();
+          const timeout = settings.faceVerification.timeoutSeconds || 180;
+          setTimeoutSeconds(timeout);
+          setTimeLeft(timeout);
+        } catch (error) {
+          console.error('Error loading settings:', error);
+          setTimeoutSeconds(180);
+          setTimeLeft(180);
+        }
+      };
+
+      loadSettings();
+
       // Reset state when modal opens
       setStep('camera');
       setError('');
       setLoading(false);
-      
+
       // Check camera permission before starting camera
       checkAndStartCamera();
     } else {
       stopCamera();
+      // Clear timeout when modal closes
+      if (timeoutRef.current) {
+        clearInterval(timeoutRef.current);
+        timeoutRef.current = null;
+      }
     }
 
     // Handle page unload to trigger failure if modal is open
@@ -53,18 +78,84 @@ export const FaceVerificationModal: React.FC<FaceVerificationModalProps> = ({
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
-    
+
     return () => {
       stopCamera();
       window.removeEventListener('beforeunload', handleBeforeUnload);
+      if (timeoutRef.current) {
+        clearInterval(timeoutRef.current);
+        timeoutRef.current = null;
+      }
     };
   }, [isOpen]);
+
+  // Countdown timer effect
+  useEffect(() => {
+    if (isOpen && step === 'camera' && !loading) {
+      // Start countdown
+      timeoutRef.current = setInterval(() => {
+        setTimeLeft((prev) => {
+          if (prev <= 1) {
+            // Timeout reached
+            if (timeoutRef.current) {
+              clearInterval(timeoutRef.current);
+              timeoutRef.current = null;
+            }
+            handleTimeout();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+
+    return () => {
+      if (timeoutRef.current) {
+        clearInterval(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    };
+  }, [isOpen, step, loading]);
+
+  const handleTimeout = async () => {
+    setStep('error');
+    setError('Face Verification timeout! You will be checked out.');
+    soundManager.playError();
+    toast.error('Face Verification timeout!');
+
+    // Create error report for timeout
+    try {
+      const { addDoc, collection, serverTimestamp } = await import('firebase/firestore');
+      const { db } = await import('@/config/firebase');
+
+      await addDoc(collection(db, 'errorReports'), {
+        userId: user.id,
+        username: user.username,
+        department: user.department,
+        position: user.position,
+        type: 'face_verification_timeout',
+        attempts: 0,
+        timestamp: serverTimestamp(),
+        status: 'pending',
+        description: `Face Verification timeout after ${timeoutSeconds} seconds`,
+        face0Url: user.faceImageUrl,
+        face1Url: user.face1Url
+      });
+    } catch (error) {
+      console.error('Error creating timeout error report:', error);
+    }
+
+    setTimeout(() => {
+      onFailure();
+      onClose();
+    }, 2000);
+  };
 
   const checkAndStartCamera = async () => {
     try {
       // Check camera permission first
       const hasPermission = await checkCameraPermission();
-      
+
       if (!hasPermission) {
         // Request permission
         try {
@@ -78,7 +169,7 @@ export const FaceVerificationModal: React.FC<FaceVerificationModalProps> = ({
           return;
         }
       }
-      
+
       // Start camera after permission is granted
       await startCamera();
     } catch (error: any) {
@@ -128,6 +219,48 @@ export const FaceVerificationModal: React.FC<FaceVerificationModalProps> = ({
       ctx.drawImage(video, 0, 0);
       canvas.toBlob((blob) => resolve(blob!), 'image/png');
     });
+  };
+
+  const handleSkip = async () => {
+    // Create error report when user skips Face Verification
+    try {
+      const { addDoc, collection, serverTimestamp } = await import('firebase/firestore');
+      const { db } = await import('@/config/firebase');
+
+      await addDoc(collection(db, 'errorReports'), {
+        userId: user.id,
+        username: user.username,
+        department: user.department,
+        position: user.position,
+        type: 'face_verification_skipped',
+        attempts: 0,
+        timestamp: serverTimestamp(),
+        status: 'pending',
+        description: 'User skipped Face Verification and was checked out',
+        face0Url: user.faceImageUrl,
+        face1Url: user.face1Url
+      });
+
+      // Log activity
+      const { logActivity } = await import('@/services/activityLog');
+      await logActivity(
+        user.id,
+        user.username,
+        user.role,
+        user.department,
+        user.position,
+        'error_report',
+        'Face Verification skipped - Error report created',
+        user.id,
+        user.role,
+        user.department
+      );
+    } catch (error) {
+      console.error('Error creating skip error report:', error);
+    }
+
+    // Call onFailure to trigger checkout
+    onFailure();
   };
 
   const handleVerify = async () => {
@@ -186,34 +319,45 @@ export const FaceVerificationModal: React.FC<FaceVerificationModalProps> = ({
 
       // Capture Face2 image
       const imageBlob = await captureImageFromVideo(videoRef.current);
-      
-      // Upload Face2 to imgbb
-      const timestamp = Date.now();
-      let face2Url = '';
-      
-      if (isImageUploadConfigured()) {
+
+      // Only upload Face2 if user doesn't have it yet (first captcha verification)
+      // Face2 is used for captcha verification tracking
+      let face2Url = user.face2Url || '';
+
+      if (!user.face2Url && isImageUploadConfigured()) {
+        // First captcha verification - upload and save Face2
         try {
+          toast.loading('Saving verification image...', { id: 'upload-face2' });
+          const timestamp = Date.now();
           face2Url = await uploadImageToImgbb(
-            imageBlob, 
+            imageBlob,
             `${user.username}_face2_${timestamp}`
           );
+          toast.dismiss('upload-face2');
+
+          // Save Face2 to user document
+          const { updateDoc, doc } = await import('firebase/firestore');
+          const { db } = await import('@/config/firebase');
+          const { getVietnamTimestamp } = await import('@/utils/time');
+
+          await updateDoc(doc(db, 'users', user.id), {
+            face2Url: face2Url,
+            updatedAt: getVietnamTimestamp()
+          });
+
+          console.log('✅ Face2 saved for first captcha verification');
         } catch (uploadError) {
           console.error('Face2 upload error:', uploadError);
-          toast.error('Unable to upload Face2 image');
+          // Don't block captcha verification if upload fails
         }
+      } else if (user.face2Url) {
+        console.log('✅ Using existing Face2 - No upload needed');
       }
 
-      // Update user with Face2 URL
+      // Continue with captcha verification
       const { updateDoc, doc, getDoc } = await import('firebase/firestore');
       const { db } = await import('@/config/firebase');
       const { logActivity } = await import('@/services/activityLog');
-      
-      if (face2Url) {
-        await updateDoc(doc(db, 'users', user.id), {
-          face2Url: face2Url,
-          updatedAt: Date.now()
-        });
-      }
 
       // Find and reset captchaSuccessCount in current session
       const sessionsQuery = await import('firebase/firestore').then(m => m.query);
@@ -341,6 +485,14 @@ export const FaceVerificationModal: React.FC<FaceVerificationModalProps> = ({
           </p>
         </div>
 
+        {/* Countdown Timer */}
+        <div className="flex items-center justify-between bg-dark-700 rounded-lg p-3 mb-4">
+          <span className="text-sm text-gray-300">Time Remaining:</span>
+          <span className={`text-lg font-bold ${timeLeft <= 30 ? 'text-red-400' : 'text-primary-400'}`}>
+            {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
+          </span>
+        </div>
+
         <div className="relative bg-black rounded-lg overflow-hidden">
           <video
             ref={videoRef}
@@ -349,7 +501,7 @@ export const FaceVerificationModal: React.FC<FaceVerificationModalProps> = ({
             muted
             className="w-full h-64 object-contain"
           />
-          
+
           <AnimatePresence>
             {step === 'processing' && (
               <motion.div
@@ -397,7 +549,7 @@ export const FaceVerificationModal: React.FC<FaceVerificationModalProps> = ({
         <div className="flex gap-3">
           <Button
             variant="danger"
-            onClick={onFailure}
+            onClick={handleSkip}
             className="flex-1"
             disabled={loading}
           >

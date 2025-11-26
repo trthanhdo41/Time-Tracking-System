@@ -42,22 +42,31 @@ export const AllImagesManager: React.FC = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      
+
+      // Helper function to convert Firebase Timestamp to number
+      const convertTimestamp = (ts: any): number => {
+        if (!ts) return Date.now();
+        if (typeof ts === 'number') return ts;
+        if (ts && typeof ts === 'object' && ts.toMillis) return ts.toMillis();
+        if (ts && typeof ts === 'object' && ts.seconds) return ts.seconds * 1000;
+        return Date.now();
+      };
+
       // Load users for mapping
       const usersData = await getAllUsers();
       setUsers(usersData);
-      
+
       // Load all images from sessions
       const allImages: ImageData[] = [];
-      
+
       try {
         const sessionsQuery = query(collection(db, 'sessions'));
         const sessionsSnapshot = await getDocs(sessionsQuery);
-        
+
         sessionsSnapshot.docs.forEach(doc => {
           const sessionData = doc.data();
           const userData = usersData.find(u => u.id === sessionData.userId);
-          
+
           // Add check-in image
           if (sessionData.face1Url || sessionData.face1ImageUrl) {
             allImages.push({
@@ -65,13 +74,13 @@ export const AllImagesManager: React.FC = () => {
               userId: sessionData.userId,
               imageUrl: sessionData.face1Url || sessionData.face1ImageUrl,
               type: 'check_in',
-              timestamp: sessionData.checkInTime || Date.now(),
+              timestamp: convertTimestamp(sessionData.checkInTime),
               username: userData?.username || sessionData.username || 'Unknown',
               department: userData?.department || sessionData.department || 'Unknown',
               position: userData?.position || sessionData.position || 'Unknown'
             });
           }
-          
+
           // Add check-out image (if exists)
           if (sessionData.face2Url || sessionData.face2ImageUrl) {
             allImages.push({
@@ -79,7 +88,7 @@ export const AllImagesManager: React.FC = () => {
               userId: sessionData.userId,
               imageUrl: sessionData.face2Url || sessionData.face2ImageUrl,
               type: 'check_out',
-              timestamp: sessionData.checkOutTime || Date.now(),
+              timestamp: convertTimestamp(sessionData.checkOutTime),
               username: userData?.username || sessionData.username || 'Unknown',
               department: userData?.department || sessionData.department || 'Unknown',
               position: userData?.position || sessionData.position || 'Unknown'
@@ -90,23 +99,23 @@ export const AllImagesManager: React.FC = () => {
         console.log('Cannot access sessions collection:', error);
         // Continue without session images
       }
-      
+
       // Load face verification images (skip if no permission)
       try {
         const faceVerifyQuery = query(collection(db, 'faceVerifications'));
         const faceVerifySnapshot = await getDocs(faceVerifyQuery);
-        
+
         faceVerifySnapshot.docs.forEach(doc => {
           const verifyData = doc.data();
           const userData = usersData.find(u => u.id === verifyData.userId);
-          
+
           if (verifyData.imageUrl) {
             allImages.push({
               id: `${doc.id}_verify`,
               userId: verifyData.userId,
               imageUrl: verifyData.imageUrl,
               type: 'face_verify',
-              timestamp: verifyData.timestamp || Date.now(),
+              timestamp: convertTimestamp(verifyData.timestamp),
               username: userData?.username,
               department: userData?.department,
               position: userData?.position
@@ -117,8 +126,8 @@ export const AllImagesManager: React.FC = () => {
         console.log('Cannot access faceVerifications collection:', error);
         // Continue without face verification images
       }
-      
-      // Sort by timestamp descending
+
+      // Sort by timestamp descending (newest first)
       allImages.sort((a, b) => b.timestamp - a.timestamp);
       setImages(allImages);
     } catch (error) {
@@ -225,7 +234,6 @@ export const AllImagesManager: React.FC = () => {
             >
               <option value="">All Types</option>
               <option value="check_in">Check In</option>
-              <option value="face_verify">Face Verify</option>
               <option value="check_out">Check Out</option>
             </select>
           </div>

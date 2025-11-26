@@ -5,14 +5,15 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { StaffNavigation } from '@/components/layout/StaffNavigation';
 import { useLocation } from 'react-router-dom';
-import { 
-  HistoryIcon, 
-  FilterIcon, 
+import {
+  HistoryIcon,
+  FilterIcon,
   SearchIcon,
   CheckInIcon,
   CheckOutIcon,
   BackSoonIcon,
-  ChartIcon
+  ChartIcon,
+  CalendarIcon
 } from '@/components/icons';
 import { formatTime, formatDate, formatDuration } from '@/utils/time';
 import { useAuthStore } from '@/store/authStore';
@@ -32,10 +33,8 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({ selectedUserId, showNa
   const [searchQuery, setSearchQuery] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [minOnlineTime, setMinOnlineTime] = useState('');
-  const [maxOnlineTime, setMaxOnlineTime] = useState('');
-  const [minBackSoonTime, setMinBackSoonTime] = useState('');
-  const [maxBackSoonTime, setMaxBackSoonTime] = useState('');
+  const [startTime, setStartTime] = useState('00:00'); // Time for start date
+  const [endTime, setEndTime] = useState('23:59'); // Time for end date
   const [userFilter, setUserFilter] = useState(''); // Filter by username/email
   const [showFilters, setShowFilters] = useState(false);
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -87,16 +86,16 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({ selectedUserId, showNa
         let endTimestamp: number | undefined;
         
         if (startDate) {
-          const startDateObj = new Date(startDate + 'T00:00:00');
+          const startDateObj = new Date(startDate + 'T' + startTime + ':00');
           startTimestamp = startDateObj.getTime();
           if (isNaN(startTimestamp)) {
             console.error('Invalid start date:', startDate);
             startTimestamp = undefined;
           }
         }
-        
+
         if (endDate) {
-          const endDateObj = new Date(endDate + 'T23:59:59');
+          const endDateObj = new Date(endDate + 'T' + endTime + ':59');
           endTimestamp = endDateObj.getTime();
           if (isNaN(endTimestamp)) {
             console.error('Invalid end date:', endDate);
@@ -131,7 +130,7 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({ selectedUserId, showNa
     };
 
     loadHistory();
-  }, [userIdToLoad, startDate, endDate, showAllUsers]);
+  }, [userIdToLoad, startDate, endDate, startTime, endTime, showAllUsers]);
 
   // Calculate stats
   const stats = {
@@ -190,17 +189,7 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({ selectedUserId, showNa
       
       if (!matches) return false;
     }
-    
-    // Online time filter (in minutes)
-    const onlineMinutes = Math.floor((session.totalOnlineTime || 0) / 60);
-    if (minOnlineTime && onlineMinutes < parseInt(minOnlineTime)) return false;
-    if (maxOnlineTime && onlineMinutes > parseInt(maxOnlineTime)) return false;
-    
-    // Back Soon time filter (in minutes)
-    const backSoonMinutes = Math.floor((session.totalBackSoonTime || 0) / 60);
-    if (minBackSoonTime && backSoonMinutes < parseInt(minBackSoonTime)) return false;
-    if (maxBackSoonTime && backSoonMinutes > parseInt(maxBackSoonTime)) return false;
-    
+
     return true;
   });
 
@@ -248,7 +237,10 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({ selectedUserId, showNa
                 {/* Helper Text */}
                 <div className="bg-primary-500/10 border border-primary-500/20 rounded-lg p-3">
                   <p className="text-sm text-gray-300">
-                    💡 Use filters to narrow down sessions by {showAllUsers ? 'user, ' : ''}date range, online time, or back soon duration
+                    💡 Use filters to narrow down sessions by {showAllUsers ? 'user, ' : ''}date and time range
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Example: From 10:00 on 5/11/2025 to 09:59 on 6/11/2025
                   </p>
                 </div>
 
@@ -267,70 +259,41 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({ selectedUserId, showNa
                   </div>
                 )}
 
-                {/* Date Range Filter */}
+                {/* Date and Time Range Filter */}
                 <div>
-                  <h3 className="text-sm font-medium text-gray-300 mb-3">Date Range</h3>
+                  <h3 className="text-sm font-medium text-gray-300 mb-3">Date and Time Range</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Input
-                      type="date"
-                      label="From Date"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                    />
-                    <Input
-                      type="date"
-                      label="To Date"
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                    />
-                  </div>
-                </div>
+                    {/* Start Date and Time */}
+                    <div className="space-y-2">
+                      <Input
+                        type="date"
+                        label="From Date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                      />
+                      <Input
+                        type="time"
+                        label="From Time"
+                        value={startTime}
+                        onChange={(e) => setStartTime(e.target.value)}
+                      />
+                    </div>
 
-                {/* Online Time Filter */}
-                <div>
-                  <h3 className="text-sm font-medium text-gray-300 mb-3">Online Time (minutes)</h3>
-                  <p className="text-xs text-gray-400 mb-2">Filter sessions by total online duration</p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Input
-                      type="number"
-                      label="Min Online Time"
-                      placeholder="e.g., 30"
-                      value={minOnlineTime}
-                      onChange={(e) => setMinOnlineTime(e.target.value)}
-                      min="0"
-                    />
-                    <Input
-                      type="number"
-                      label="Max Online Time"
-                      placeholder="e.g., 480"
-                      value={maxOnlineTime}
-                      onChange={(e) => setMaxOnlineTime(e.target.value)}
-                      min="0"
-                    />
-                  </div>
-                </div>
-
-                {/* Back Soon Time Filter */}
-                <div>
-                  <h3 className="text-sm font-medium text-gray-300 mb-3">Back Soon Time (minutes)</h3>
-                  <p className="text-xs text-gray-400 mb-2">Filter sessions by back soon duration</p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Input
-                      type="number"
-                      label="Min Back Soon Time"
-                      placeholder="e.g., 0"
-                      value={minBackSoonTime}
-                      onChange={(e) => setMinBackSoonTime(e.target.value)}
-                      min="0"
-                    />
-                    <Input
-                      type="number"
-                      label="Max Back Soon Time"
-                      placeholder="e.g., 60"
-                      value={maxBackSoonTime}
-                      onChange={(e) => setMaxBackSoonTime(e.target.value)}
-                      min="0"
-                    />
+                    {/* End Date and Time */}
+                    <div className="space-y-2">
+                      <Input
+                        type="date"
+                        label="To Date"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                      />
+                      <Input
+                        type="time"
+                        label="To Time"
+                        value={endTime}
+                        onChange={(e) => setEndTime(e.target.value)}
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -343,10 +306,8 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({ selectedUserId, showNa
                       setUserFilter('');
                       setStartDate('');
                       setEndDate('');
-                      setMinOnlineTime('');
-                      setMaxOnlineTime('');
-                      setMinBackSoonTime('');
-                      setMaxBackSoonTime('');
+                      setStartTime('00:00');
+                      setEndTime('23:59');
                     }}
                   >
                     Clear All Filters
@@ -369,25 +330,78 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({ selectedUserId, showNa
         </Card>
 
         {/* Summary Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <Card gradient>
-            <CardHeader title="Total Work Hours" icon={<ChartIcon />} />
-            <div className="text-3xl font-bold text-primary-400">
-              {formatDuration(stats.totalOnlineTime)}
+        <div className="space-y-6 mb-8">
+          {/* Date Range Display - Always show */}
+          <Card className="bg-red-500/10 border-red-500/30">
+            <div className="p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <CalendarIcon className="w-5 h-5 text-red-400" />
+                <h3 className="text-lg font-semibold text-red-400">Date Range Filter</h3>
+              </div>
+              <div className="text-white space-y-1">
+                {startDate ? (
+                  <p className="text-sm">
+                    <span className="text-gray-400">From:</span>{' '}
+                    <span className="font-medium">{formatDate(new Date(startDate + 'T' + startTime).getTime())} {startTime}</span>
+                  </p>
+                ) : (
+                  <p className="text-sm">
+                    <span className="text-gray-400">From:</span>{' '}
+                    <span className="font-medium text-gray-500">All time</span>
+                  </p>
+                )}
+                {endDate ? (
+                  <p className="text-sm">
+                    <span className="text-gray-400">To:</span>{' '}
+                    <span className="font-medium">{formatDate(new Date(endDate + 'T' + endTime).getTime())} {endTime}</span>
+                  </p>
+                ) : (
+                  <p className="text-sm">
+                    <span className="text-gray-400">To:</span>{' '}
+                    <span className="font-medium text-gray-500">Now</span>
+                  </p>
+                )}
+              </div>
             </div>
-            <p className="text-sm text-gray-400 mt-2">
-              {sessions.length} total sessions
-              {filteredSessions.length !== sessions.length && ` • ${filteredSessions.length} filtered`}
-            </p>
           </Card>
 
-          <Card gradient>
-            <CardHeader title="Back Soon Time" icon={<BackSoonIcon />} />
-            <div className="text-3xl font-bold text-yellow-400">
-              {formatDuration(stats.totalBackSoonTime)}
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card gradient>
+              <CardHeader title="Total Work Hours" icon={<ChartIcon />} />
+              <div className="text-3xl font-bold text-primary-400">
+                {formatDuration(stats.totalOnlineTime)}
+              </div>
+              <p className="text-sm text-gray-400 mt-2">
+                {sessions.length} total sessions
+                {filteredSessions.length !== sessions.length && ` • ${filteredSessions.length} filtered`}
+              </p>
+            </Card>
+
+            <Card gradient>
+              <CardHeader title="Back Soon Time" icon={<BackSoonIcon />} />
+              <div className="text-3xl font-bold text-yellow-400">
+                {formatDuration(stats.totalBackSoonTime)}
+              </div>
+              <p className="text-sm text-gray-400 mt-2">Total</p>
+            </Card>
+          </div>
+
+          {/* Employee Name Display */}
+          {!showAllUsers && user && (
+            <div className="mt-6">
+              <Card gradient>
+                <div className="text-center">
+                  <h2 className="text-2xl font-bold gradient-text">
+                    {user.fullName || user.username}
+                  </h2>
+                  <p className="text-sm text-gray-400 mt-1">
+                    {user.position} - {user.department}
+                  </p>
+                </div>
+              </Card>
             </div>
-            <p className="text-sm text-gray-400 mt-2">Total</p>
-          </Card>
+          )}
         </div>
 
         {/* History Timeline */}

@@ -8,6 +8,7 @@ import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs } fro
 import { auth, db } from '@/config/firebase';
 import { User, UserRole } from '@/types';
 import { logActivity } from './activityLog';
+import { getVietnamTimestamp } from '@/utils/time';
 import { startUserStatusTracking, stopUserStatusTracking } from '@/utils/userStatusTracker';
 
 /**
@@ -193,6 +194,7 @@ export const signIn = async (usernameOrEmail: string, password: string): Promise
       // This is a legacy account, create a basic user document
       const firebaseUser = userCredential.user;
       const emailParts = firebaseUser.email?.split('@') || ['user', 'example.com'];
+      const vietnamTime = getVietnamTimestamp();
       const defaultUser: User = {
         id: firebaseUser.uid,
         username: emailParts[0] || 'user',
@@ -200,8 +202,8 @@ export const signIn = async (usernameOrEmail: string, password: string): Promise
         role: 'staff', // Default to staff instead of admin for safety
         department: 'System',
         position: 'Employee',
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
+        createdAt: vietnamTime,
+        updatedAt: vietnamTime,
         isActive: true,
         notificationsEnabled: true,
       };
@@ -300,7 +302,8 @@ export const createUser = async (
 ): Promise<User> => {
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    
+
+    const vietnamTime = getVietnamTimestamp();
     const newUser: User = {
       id: userCredential.user.uid,
       username,
@@ -308,8 +311,8 @@ export const createUser = async (
       role,
       department,
       position,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
+      createdAt: vietnamTime,
+      updatedAt: vietnamTime,
       isActive: true,
       notificationsEnabled: true,
     };

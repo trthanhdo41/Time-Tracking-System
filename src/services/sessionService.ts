@@ -18,6 +18,7 @@ import {
 import { db } from '@/config/firebase';
 import { Session, User } from '@/types';
 import { logActivity } from './activityLog';
+import { getVietnamTimestamp } from '@/utils/time';
 
 /**
  * Create a new check-in session
@@ -27,16 +28,17 @@ export const createCheckInSession = async (
   faceImageUrl: string
 ): Promise<Session> => {
   try {
-    const sessionId = `${user.id}_${Date.now()}`;
-    
-    // Create session with server timestamp
+    const vietnamTime = getVietnamTimestamp();
+    const sessionId = `${user.id}_${vietnamTime}`;
+
+    // Create session with Vietnam timezone (GMT+7)
     const sessionData: any = {
       id: sessionId,
       userId: user.id,
       username: user.username,
       department: user.department,
       position: user.position,
-      checkInTime: serverTimestamp(), // Use Firebase server timestamp
+      checkInTime: vietnamTime, // Use Vietnam timestamp (GMT+7)
       status: 'online',
       faceImageUrl: user.faceImageUrl || faceImageUrl,
       face1Url: faceImageUrl,
@@ -46,29 +48,19 @@ export const createCheckInSession = async (
       captchaAttempts: 0,
       captchaSuccessCount: 0,
       faceVerificationCount: 0,
-      lastActivityTime: serverTimestamp(), // Server timestamp
-      lastCaptchaTime: serverTimestamp(), // Server timestamp
+      lastActivityTime: vietnamTime, // Vietnam timestamp
+      lastCaptchaTime: vietnamTime, // Vietnam timestamp
     };
 
-    // Save to Firestore with server timestamp
+    // Save to Firestore
     await setDoc(doc(db, 'sessions', sessionId), sessionData);
-    
-    // Read back to get actual timestamp from server
-    const sessionSnap = await getDoc(doc(db, 'sessions', sessionId));
-    const savedSession = sessionSnap.data() as any;
-    
-    // Convert Timestamp objects to numbers
+
+    // Return session with Vietnam timestamps
     const newSession: Session = {
-      ...savedSession,
-      checkInTime: savedSession.checkInTime instanceof Timestamp 
-        ? savedSession.checkInTime.toMillis() 
-        : Date.now(),
-      lastActivityTime: savedSession.lastActivityTime instanceof Timestamp
-        ? savedSession.lastActivityTime.toMillis()
-        : Date.now(),
-      lastCaptchaTime: savedSession.lastCaptchaTime instanceof Timestamp
-        ? savedSession.lastCaptchaTime.toMillis()
-        : Date.now(),
+      ...sessionData,
+      checkInTime: vietnamTime,
+      lastActivityTime: vietnamTime,
+      lastCaptchaTime: vietnamTime,
     };
 
     // Log activity
@@ -103,7 +95,7 @@ export const updateSessionBackSoon = async (
   try {
     const sessionRef = doc(db, 'sessions', sessionId);
     const userRef = doc(db, 'users', user.id);
-    const now = Date.now();
+    const now = getVietnamTimestamp();
 
     await updateDoc(sessionRef, {
       status: 'back_soon',
@@ -149,8 +141,8 @@ export const updateSessionBackOnline = async (
   try {
     const sessionRef = doc(db, 'sessions', sessionId);
     const userRef = doc(db, 'users', user.id);
-    const now = Date.now();
-    
+    const now = getVietnamTimestamp();
+
     const backSoonEvents = await getBackSoonEvents(sessionId);
     if (backSoonEvents.length > 0) {
       const lastEvent = backSoonEvents[backSoonEvents.length - 1];
@@ -159,7 +151,7 @@ export const updateSessionBackOnline = async (
         lastEvent.duration = now - lastEvent.startTime;
       }
     }
-    
+
     // Calculate total back soon time (in seconds)
     const totalBackSoonTime = Math.floor(backSoonEvents.reduce((sum, event) => sum + (event.duration || 0), 0) / 1000);
 
@@ -205,7 +197,7 @@ export const checkOutSession = async (
 ): Promise<void> => {
   try {
     const sessionRef = doc(db, 'sessions', sessionId);
-    const now = Date.now();
+    const now = getVietnamTimestamp();
     
     // Get current session data to calculate times
     const sessionDoc = await getDocs(query(collection(db, 'sessions'), where('id', '==', sessionId), limit(1)));

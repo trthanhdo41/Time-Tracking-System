@@ -1,6 +1,7 @@
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { checkOutSession } from '@/services/sessionService';
+import { getVietnamTimestamp } from '@/utils/time';
 
 // Throttle activity updates to avoid lag (only update every 30 seconds max)
 const ACTIVITY_UPDATE_THROTTLE = 30000; // 30 seconds
@@ -8,37 +9,37 @@ let lastActivityUpdate = 0;
 let activityPending = false;
 
 // Track if user is actively interacting (mouse/keyboard events)
-let lastActivityTime = Date.now();
+let lastActivityTime = getVietnamTimestamp();
 let currentActivityTracking: (() => void) | null = null;
 
 /**
  * Update last activity time when user interacts (throttled to avoid lag)
  */
 const updateActivityThrottled = async (userId: string, sessionId?: string) => {
-  const now = Date.now();
-  
+  const now = getVietnamTimestamp();
+
   // Update local lastActivityTime immediately (no lag)
   lastActivityTime = now;
-  
+
   // Only update Firestore if throttle period has passed
   if (now - lastActivityUpdate < ACTIVITY_UPDATE_THROTTLE) {
     return; // Skip update if within throttle period
   }
-  
+
   // Prevent concurrent updates
   if (activityPending) {
     return;
   }
-  
+
   activityPending = true;
   lastActivityUpdate = now;
-  
+
   try {
-    // Update user lastActivityAt
+    // Update user lastActivityAt with Vietnam timestamp
     await updateDoc(doc(db, 'users', userId), {
       lastActivityAt: now
     });
-    
+
     // Update session lastActivityTime if session exists
     if (sessionId) {
       await updateDoc(doc(db, 'sessions', sessionId), {

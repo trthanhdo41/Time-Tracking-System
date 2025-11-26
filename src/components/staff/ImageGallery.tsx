@@ -13,7 +13,7 @@ import toast from 'react-hot-toast';
 interface ImageItem {
   id: string;
   url: string;
-  type: 'check_in' | 'face_verify' | 'check_out';
+  type: 'face0' | 'face1' | 'face2' | 'face_verify' | 'check_out';
   timestamp: number;
   sessionId?: string;
 }
@@ -52,24 +52,35 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({ userId }) => {
       
       snapshot.forEach((doc) => {
         const session = doc.data();
-        
-        // Add check-in image if exists
+
+        // Add Face0 (base image from user profile) if exists
         if (session.faceImageUrl) {
           fetchedImages.push({
-            id: `${doc.id}_checkin`,
+            id: `${doc.id}_face0`,
             url: session.faceImageUrl,
-            type: 'check_in',
+            type: 'face0',
             timestamp: session.checkInTime,
             sessionId: doc.id
           });
         }
-        
-        // Add face1Url if different from faceImageUrl
+
+        // Add Face1 (check-in image) if exists and different from Face0
         if (session.face1Url && session.face1Url !== session.faceImageUrl) {
           fetchedImages.push({
             id: `${doc.id}_face1`,
             url: session.face1Url,
-            type: 'check_in',
+            type: 'face1',
+            timestamp: session.checkInTime,
+            sessionId: doc.id
+          });
+        }
+
+        // Add Face2 (periodic verification image) if exists
+        if (session.face2Url) {
+          fetchedImages.push({
+            id: `${doc.id}_face2`,
+            url: session.face2Url,
+            type: 'face2',
             timestamp: session.checkInTime,
             sessionId: doc.id
           });
@@ -105,8 +116,12 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({ userId }) => {
 
   const getImageTypeLabel = (type: string) => {
     switch (type) {
-      case 'check_in':
-        return 'Check In Image';
+      case 'face0':
+        return 'Face0 (Base Image)';
+      case 'face1':
+        return 'Face1 (Check-in)';
+      case 'face2':
+        return 'Face2 (Verification)';
       case 'face_verify':
         return 'Verification Image';
       case 'check_out':
@@ -118,8 +133,12 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({ userId }) => {
 
   const getImageTypeColor = (type: string) => {
     switch (type) {
-      case 'check_in':
+      case 'face0':
+        return 'border-yellow-500 bg-yellow-500/10';
+      case 'face1':
         return 'border-green-500 bg-green-500/10';
+      case 'face2':
+        return 'border-blue-500 bg-blue-500/10';
       case 'face_verify':
         return 'border-blue-500 bg-blue-500/10';
       case 'check_out':

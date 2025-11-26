@@ -90,36 +90,41 @@ export const CheckInButton: React.FC = () => {
 
       // Capture image
       const imageBlob = await captureImageFromVideo(videoRef.current);
-      
-      // Upload Face1 to imgbb (free unlimited storage)
-      const timestamp = Date.now();
-      let face1Url = '';
-      
-      if (isImageUploadConfigured()) {
+
+      // Only upload Face1 if user doesn't have it yet (first check-in)
+      let face1Url = user.face1Url || ''; // Use existing Face1 if available
+
+      if (!user.face1Url && isImageUploadConfigured()) {
+        // First check-in - upload and save Face1
         try {
+          toast.loading('Saving check-in image...', { id: 'upload-face1' });
+          const timestamp = Date.now();
           face1Url = await uploadImageToImgbb(
-            imageBlob, 
-            `${user.username}_checkin_${timestamp}`
+            imageBlob,
+            `${user.username}_face1_${timestamp}`
           );
+          toast.dismiss('upload-face1');
+
+          // Save Face1 to user document
+          const { updateDoc, doc } = await import('firebase/firestore');
+          const { db } = await import('@/config/firebase');
+          const { getVietnamTimestamp } = await import('@/utils/time');
+
+          await updateDoc(doc(db, 'users', user.id), {
+            face1Url: face1Url,
+            updatedAt: getVietnamTimestamp()
+          });
+
+          console.log('✅ Face1 saved for first check-in');
         } catch (uploadError) {
           console.error('Image upload error:', uploadError);
           toast.error('Unable to upload image, but check-in will continue');
           // Continue with empty face1Url - system still works without image
         }
+      } else if (user.face1Url) {
+        console.log('✅ Using existing Face1 - No upload needed');
       } else {
         console.warn('Image upload not configured. Add VITE_IMGBB_API_KEY to .env');
-        toast.error('Image upload not configured. Check-in without saving image.');
-      }
-
-      // Update user with Face1 URL
-      if (face1Url) {
-        // Update user document with Face1 URL
-        const { updateDoc, doc } = await import('firebase/firestore');
-        const { db } = await import('@/config/firebase');
-        await updateDoc(doc(db, 'users', user.id), {
-          face1Url: face1Url,
-          updatedAt: Date.now()
-        });
       }
 
       // Create session using service
