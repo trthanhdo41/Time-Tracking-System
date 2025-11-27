@@ -7,6 +7,7 @@ import { db } from '@/config/firebase';
 import { collection, query, getDocs, orderBy, updateDoc, doc } from 'firebase/firestore';
 import { useAuthStore } from '@/store/authStore';
 import toast from 'react-hot-toast';
+import { getVietnamTimestamp } from '@/utils/time';
 
 interface ErrorReport {
   id: string;
@@ -86,7 +87,7 @@ export const ErrorReportsManager: React.FC = () => {
     try {
       await updateDoc(doc(db, 'errorReports', reportId), {
         status: 'resolved',
-        resolvedAt: Date.now()
+        resolvedAt: getVietnamTimestamp()
       });
       setReports(reports.map(r => r.id === reportId ? { ...r, status: 'resolved' } : r));
       toast.success('Marked as resolved');

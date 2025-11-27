@@ -286,7 +286,7 @@ export const adminForceLogoutUser = async (
       const userRef = doc(db, 'users', userId);
       await updateDoc(userRef, {
         status: 'offline',
-        lastLogoutAt: Date.now()
+        lastLogoutAt: getVietnamTimestamp()
       });
       return;
     }
@@ -368,9 +368,9 @@ export const getUserSessionHistory = async (
       return {
         ...data,
         id: doc.id,
-        checkInTime: data.checkInTime instanceof Timestamp ? data.checkInTime.toMillis() : (typeof data.checkInTime === 'number' ? data.checkInTime : Date.now()),
+        checkInTime: data.checkInTime instanceof Timestamp ? data.checkInTime.toMillis() : (typeof data.checkInTime === 'number' ? data.checkInTime : getVietnamTimestamp()),
         checkOutTime: data.checkOutTime instanceof Timestamp ? data.checkOutTime?.toMillis() : (typeof data.checkOutTime === 'number' ? data.checkOutTime : undefined),
-        lastActivityTime: data.lastActivityTime instanceof Timestamp ? data.lastActivityTime.toMillis() : (typeof data.lastActivityTime === 'number' ? data.lastActivityTime : Date.now()),
+        lastActivityTime: data.lastActivityTime instanceof Timestamp ? data.lastActivityTime.toMillis() : (typeof data.lastActivityTime === 'number' ? data.lastActivityTime : getVietnamTimestamp()),
         lastCaptchaTime: data.lastCaptchaTime instanceof Timestamp ? data.lastCaptchaTime?.toMillis() : (typeof data.lastCaptchaTime === 'number' ? data.lastCaptchaTime : undefined),
       } as Session;
     });
@@ -380,7 +380,7 @@ export const getUserSessionHistory = async (
       const beforeFilter = sessions.length;
       sessions = sessions.filter(session => {
         // checkInTime is already converted to number above
-        const checkInTime = typeof session.checkInTime === 'number' ? session.checkInTime : Date.now();
+        const checkInTime = typeof session.checkInTime === 'number' ? session.checkInTime : getVietnamTimestamp();
         
         // Filter: startDate <= checkInTime <= endDate
         if (startDate && checkInTime < startDate) {
@@ -434,7 +434,7 @@ export const getAllSessionsHistory = async (
       const beforeFilter = sessions.length;
       sessions = sessions.filter(session => {
         // checkInTime is already converted to number above
-        const checkInTime = typeof session.checkInTime === 'number' ? session.checkInTime : Date.now();
+        const checkInTime = typeof session.checkInTime === 'number' ? session.checkInTime : getVietnamTimestamp();
         
         // Filter: startDate <= checkInTime <= endDate
         if (startDate && checkInTime < startDate) {
@@ -500,7 +500,7 @@ export const updateCaptchaAttempt = async (
 ): Promise<void> => {
   try {
     const sessionRef = doc(db, 'sessions', sessionId);
-    const now = Date.now();
+    const now = getVietnamTimestamp();
 
     if (success) {
       // Get current captchaSuccessCount to increment

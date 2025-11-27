@@ -235,7 +235,7 @@ export const updateUser = async (
     await setDoc(userDocRef, {
       ...userData,
       ...updates,
-      updatedAt: Date.now()
+      updatedAt: getVietnamTimestamp()
     }, { merge: true });
 
     // Log activity

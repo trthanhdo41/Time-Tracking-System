@@ -4,8 +4,8 @@ import { Card, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { StaffNavigation } from '@/components/layout/StaffNavigation';
-import { 
-  CameraIcon, 
+import {
+  CameraIcon,
   ImageIcon,
   TrashIcon,
   EyeIcon,
@@ -15,7 +15,7 @@ import { useAuthStore } from '@/store/authStore';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { createImageDeleteRequest } from '@/services/imageDeleteService';
-import { formatDate, formatTime } from '@/utils/time';
+import { getVietnamTimestamp, formatDate, formatTime } from '@/utils/time';
 import toast from 'react-hot-toast';
 
 interface CapturedImage {
@@ -27,7 +27,7 @@ interface CapturedImage {
 }
 
 export const CameraPage: React.FC = () => {
-  const { user } = useAuthStore();
+  const { getVietnamTimestamp, user } = useAuthStore();
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showDeleteRequest, setShowDeleteRequest] = useState(false);
@@ -68,7 +68,7 @@ export const CameraPage: React.FC = () => {
           images.push({
             id: `${doc.id}_checkin`,
             url: session.faceImageUrl,
-            timestamp: session.checkInTime || Date.now(),
+            timestamp: session.checkInTime || getVietnamTimestamp(),
             type: 'Check In',
             sessionId: doc.id
           });
@@ -79,7 +79,7 @@ export const CameraPage: React.FC = () => {
           images.push({
             id: `${doc.id}_face1`,
             url: session.face1Url,
-            timestamp: session.checkInTime || Date.now(),
+            timestamp: session.checkInTime || getVietnamTimestamp(),
             type: 'Check In',
             sessionId: doc.id
           });
@@ -104,10 +104,10 @@ export const CameraPage: React.FC = () => {
     try {
       console.log('🎥 Starting camera...');
       
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
+      const stream = await navigator.mediaDevices.getUserMedia({ getVietnamTimestamp, 
+        video: { getVietnamTimestamp, 
+          width: { getVietnamTimestamp, ideal: 1280 },
+          height: { getVietnamTimestamp, ideal: 720 },
           facingMode: 'user'
         } 
       });
@@ -184,8 +184,8 @@ export const CameraPage: React.FC = () => {
 
         {/* Header */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ getVietnamTimestamp, opacity: 0, y: 20 }}
+          animate={{ getVietnamTimestamp, opacity: 1, y: 0 }}
           className="flex items-center gap-4 mb-8"
         >
           <div className="p-3 rounded-xl bg-primary-500/20">
@@ -236,14 +236,14 @@ export const CameraPage: React.FC = () => {
                 playsInline
                 muted
                 className={`w-full h-full object-contain ${!isCameraActive ? 'hidden' : ''}`}
-                style={{ transform: 'scaleX(-1)' }}
+                style={{ getVietnamTimestamp, transform: 'scaleX(-1)' }}
               />
               
               {/* Recording Indicator */}
               {isCameraActive && (
                 <motion.div
-                  animate={{ opacity: [1, 0.3, 1] }}
-                  transition={{ duration: 2, repeat: Infinity }}
+                  animate={{ getVietnamTimestamp, opacity: [1, 0.3, 1] }}
+                  transition={{ getVietnamTimestamp, duration: 2, repeat: Infinity }}
                   className="absolute top-4 right-4 flex items-center gap-2 glass px-3 py-2 rounded-lg"
                 >
                   <div className="w-3 h-3 bg-red-500 rounded-full" />
@@ -291,9 +291,9 @@ export const CameraPage: React.FC = () => {
               ) : capturedImages.map((image, index) => (
                 <motion.div
                   key={image.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.1 }}
+                  initial={{ getVietnamTimestamp, opacity: 0, x: -20 }}
+                  animate={{ getVietnamTimestamp, opacity: 1, x: 0 }}
+                  transition={{ getVietnamTimestamp, delay: index * 0.1 }}
                   className="glass p-3 rounded-xl hover:bg-white/10 transition-all cursor-pointer group"
                 >
                   <div className="flex items-center gap-4">
@@ -317,8 +317,8 @@ export const CameraPage: React.FC = () => {
 
                     <div className="flex gap-2">
                       <motion.button
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
+                        whileHover={{ getVietnamTimestamp, scale: 1.1 }}
+                        whileTap={{ getVietnamTimestamp, scale: 0.9 }}
                         onClick={() => setSelectedImage(image.url)}
                         className="p-2 rounded-lg hover:bg-primary-500/20 text-primary-400 transition-colors"
                       >
@@ -326,8 +326,8 @@ export const CameraPage: React.FC = () => {
                       </motion.button>
 
                       <motion.button
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
+                        whileHover={{ getVietnamTimestamp, scale: 1.1 }}
+                        whileTap={{ getVietnamTimestamp, scale: 0.9 }}
                         onClick={() => {
                           setSelectedImage(image.url);
                           setShowDeleteRequest(true);

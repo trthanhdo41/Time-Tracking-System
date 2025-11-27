@@ -13,6 +13,7 @@ import { logActivity } from '@/services/activityLog';
 import { db } from '@/config/firebase';
 import { collection, addDoc } from 'firebase/firestore';
 import toast from 'react-hot-toast';
+import { getVietnamTimestamp } from '@/utils/time';
 
 interface CaptchaModalProps {
   isOpen: boolean;
@@ -94,7 +95,7 @@ export const CaptchaModal: React.FC<CaptchaModalProps> = ({
             position: user.position,
             type: 'captcha_timeout',
             attempts: attempts,
-            timestamp: Date.now(),
+            timestamp: getVietnamTimestamp(),
             status: 'pending',
             description: `User failed to complete CAPTCHA within time limit (${settings?.captcha.timeoutSeconds || 180} seconds)`,
           });
@@ -162,7 +163,7 @@ export const CaptchaModal: React.FC<CaptchaModalProps> = ({
             position: user.position,
             type: 'captcha_failed',
             attempts: maxAttempts,
-            timestamp: Date.now(),
+            timestamp: getVietnamTimestamp(),
             status: 'pending',
             description: `User failed CAPTCHA verification ${maxAttempts} times during check-in`,
           });

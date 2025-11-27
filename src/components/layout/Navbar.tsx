@@ -14,19 +14,19 @@ import {
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { signOut } from '@/services/auth';
 import toast from 'react-hot-toast';
-import { formatTime } from '@/utils/time';
+import { getVietnamTimeString } from '@/utils/time';
 
 export const Navbar: React.FC = () => {
   const { user } = useAuthStore();
   const { status, currentSession } = useSessionStore();
   const { isCollapsed: sidebarCollapsed } = useSidebarStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [time, setTime] = useState(new Date());
+  const [currentTime, setCurrentTime] = useState(getVietnamTimeString());
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  // Update time every second
+  // Update Vietnam time every second
   React.useEffect(() => {
-    const interval = setInterval(() => setTime(new Date()), 1000);
+    const interval = setInterval(() => setCurrentTime(getVietnamTimeString()), 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -70,14 +70,14 @@ export const Navbar: React.FC = () => {
             )}
           </div>
 
-          {/* Center - Time */}
+          {/* Center - Vietnam Time (GMT+7) */}
           <div className="flex items-center justify-center flex-1">
             <div className="text-center">
               <div className="text-2xl font-mono font-bold text-primary-400">
-                {formatTime(time.getTime())}
+                {currentTime.split(', ')[1]}
               </div>
-              <div className="text-xs text-gray-500">
-                {time.toLocaleDateString('en-US')}
+              <div className="text-xs text-gray-400">
+                {currentTime.split(', ')[0]} <span className="text-primary-500">(GMT+7)</span>
               </div>
             </div>
           </div>

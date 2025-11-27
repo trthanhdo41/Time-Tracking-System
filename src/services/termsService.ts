@@ -1,6 +1,7 @@
 // Terms and Conditions service
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/config/firebase';
+import { getVietnamTimestamp } from '@/utils/time';
 
 const TERMS_DOC_ID = 'termsAndConditions';
 
@@ -26,7 +27,7 @@ export const getTermsAndConditions = async (): Promise<TermsAndConditions | null
         id: termsSnap.id,
         content: data.content || '',
         version: data.version || 1,
-        updatedAt: data.updatedAt?.toMillis() || Date.now(),
+        updatedAt: data.updatedAt?.toMillis() || getVietnamTimestamp(),
         updatedBy: data.updatedBy || 'system',
       };
     }
@@ -36,7 +37,7 @@ export const getTermsAndConditions = async (): Promise<TermsAndConditions | null
       id: TERMS_DOC_ID,
       content: 'Welcome to Enterprise Time Tracking System. By using this system, you agree to comply with all company policies and guidelines.',
       version: 1,
-      updatedAt: Date.now(),
+      updatedAt: getVietnamTimestamp(),
       updatedBy: 'system',
     };
   } catch (error) {

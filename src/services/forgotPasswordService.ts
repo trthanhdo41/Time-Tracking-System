@@ -2,6 +2,7 @@
 import { collection, addDoc, query, where, getDocs, updateDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { logAdminActivity } from './adminActivityService';
+import { getVietnamTimestamp } from '@/utils/time';
 
 export interface ForgotPasswordRequest {
   id?: string;
@@ -103,7 +104,7 @@ export const getAllForgotPasswordRequests = async (): Promise<ForgotPasswordRequ
     return snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
-      requestedAt: doc.data().requestedAt?.toMillis() || Date.now(),
+      requestedAt: doc.data().requestedAt?.toMillis() || getVietnamTimestamp(),
       processedAt: doc.data().processedAt?.toMillis(),
     } as ForgotPasswordRequest));
   } catch (error) {
@@ -124,7 +125,7 @@ export const getPendingForgotPasswordRequests = async (): Promise<ForgotPassword
     return snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
-      requestedAt: doc.data().requestedAt?.toMillis() || Date.now(),
+      requestedAt: doc.data().requestedAt?.toMillis() || getVietnamTimestamp(),
     } as ForgotPasswordRequest));
   } catch (error) {
     console.error('Error getting pending forgot password requests:', error);

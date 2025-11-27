@@ -1,6 +1,7 @@
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { logAdminActivity } from './adminActivityService';
+import { getVietnamTimestamp } from '@/utils/time';
 
 export interface SystemSettings {
   captcha: {
@@ -79,7 +80,7 @@ export const getDefaultSettings = (): SystemSettings => ({
     autoLogoutEnabled: true,
     sessionTimeoutHours: 12,
   },
-  updatedAt: Date.now(),
+  updatedAt: getVietnamTimestamp(),
 });
 
 // Get current settings
@@ -113,7 +114,7 @@ export const updateSystemSettings = async (
 
     await setDoc(settingsRef, {
       ...settings,
-      updatedAt: Date.now(),
+      updatedAt: getVietnamTimestamp(),
       updatedBy,
     }, { merge: true });
 

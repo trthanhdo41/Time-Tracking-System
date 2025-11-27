@@ -98,7 +98,7 @@ export const CheckInButton: React.FC = () => {
         // First check-in - upload and save Face1
         try {
           toast.loading('Saving check-in image...', { id: 'upload-face1' });
-          const timestamp = Date.now();
+          const timestamp = getVietnamTimestamp();
           face1Url = await uploadImageToImgbb(
             imageBlob,
             `${user.username}_face1_${timestamp}`

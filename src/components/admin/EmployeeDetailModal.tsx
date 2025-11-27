@@ -8,6 +8,7 @@ import { useAuthStore } from '@/store/authStore';
 import { Input } from '@/components/ui/Input';
 import toast from 'react-hot-toast';
 import { ClockIcon, EditIcon, XIcon, TrashIcon, LogoutIcon } from '@/components/icons';
+import { getVietnamTimestamp } from '@/utils/time';
 
 interface EmployeeDetailModalProps {
   user: User | null;
@@ -294,8 +295,8 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
 
                 if (!session.checkOutTime && session.checkInTime) {
                   // Active session - calculate current values
-                  const now = Date.now();
-                  const checkInTime = typeof session.checkInTime === 'number' ? session.checkInTime : Date.now();
+                  const now = getVietnamTimestamp();
+                  const checkInTime = typeof session.checkInTime === 'number' ? session.checkInTime : getVietnamTimestamp();
                   const totalElapsed = Math.floor((now - checkInTime) / 1000);
                   
                   // Calculate back soon time from events

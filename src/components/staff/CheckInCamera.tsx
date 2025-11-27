@@ -372,7 +372,7 @@ export const CheckInCamera: React.FC<CheckInCameraProps> = ({ onClose, onSuccess
         // First check-in - upload and save Face1
         try {
           toast.loading('Saving check-in image...', { id: 'upload-face1' });
-          face1Url = await uploadImageToImgbb(imageBlob, `${user.username}_face1_${Date.now()}`);
+          face1Url = await uploadImageToImgbb(imageBlob, `${user.username}_face1_${getVietnamTimestamp()}`);
           toast.dismiss('upload-face1');
 
           // Save Face1 to user document
@@ -432,7 +432,7 @@ export const CheckInCamera: React.FC<CheckInCameraProps> = ({ onClose, onSuccess
       let failedImageUrl = '';
       if (isImageUploadConfigured()) {
         try {
-          failedImageUrl = await uploadImageToImgbb(imageBlob, `failed_checkin_${user.id}_${Date.now()}`);
+          failedImageUrl = await uploadImageToImgbb(imageBlob, `failed_checkin_${user.id}_${getVietnamTimestamp()}`);
         } catch (error) {
           console.error('Failed to upload error image:', error);
         }
@@ -447,7 +447,7 @@ export const CheckInCamera: React.FC<CheckInCameraProps> = ({ onClose, onSuccess
         type: 'face_verification_failed',
         failedImageUrl,
         attempts: MAX_ATTEMPTS,
-        timestamp: Date.now(),
+        timestamp: getVietnamTimestamp(),
         status: 'pending',
         description: `User failed face verification ${MAX_ATTEMPTS} times during check-in`,
       });

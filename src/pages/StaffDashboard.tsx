@@ -18,7 +18,7 @@ import {
   CameraIcon,
   ChartIcon 
 } from '@/components/icons';
-import { formatDuration, calculateDuration, getVietnamTimeString } from '@/utils/time';
+import { formatDuration, calculateDuration, getVietnamTimeString, getVietnamTimestamp } from '@/utils/time';
 import { soundManager } from '@/utils/sound';
 import { 
   checkOutSession, 
@@ -97,7 +97,7 @@ export const StaffDashboard: React.FC = () => {
         // Check if session is stale (inactive > 5 minutes)
         const lastActivityTime = session.lastActivityTime;
         if (lastActivityTime) {
-          const now = Date.now();
+          const now = getVietnamTimestamp();
           const lastActivity = typeof lastActivityTime === 'number' 
             ? lastActivityTime 
             : (lastActivityTime as any).seconds * 1000;
@@ -190,7 +190,7 @@ export const StaffDashboard: React.FC = () => {
       if (currentSession && status === 'online' && user) {
         const lastActivityTime = currentSession.lastActivityTime;
         if (lastActivityTime) {
-          const now = Date.now();
+          const now = getVietnamTimestamp();
           const lastActivity = typeof lastActivityTime === 'number' 
             ? lastActivityTime 
             : (lastActivityTime as any).seconds * 1000;
@@ -222,8 +222,8 @@ export const StaffDashboard: React.FC = () => {
         } else {
           return;
         }
-        
-        const now = Date.now();
+
+        const now = getVietnamTimestamp();
         const totalElapsed = Math.floor((now - checkInTime) / 1000);
         
         // Calculate back soon time

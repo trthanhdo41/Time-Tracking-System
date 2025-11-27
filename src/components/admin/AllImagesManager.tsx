@@ -9,7 +9,7 @@ import { getAllUsers } from '@/services/userService';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { useAuthStore } from '@/store/authStore';
-import { formatDate, formatTime } from '@/utils/time';
+import { getVietnamTimestamp, formatDate, formatTime } from '@/utils/time';
 import toast from 'react-hot-toast';
 
 interface ImageData {
@@ -24,7 +24,7 @@ interface ImageData {
 }
 
 export const AllImagesManager: React.FC = () => {
-  const { user } = useAuthStore();
+  const { getVietnamTimestamp, user } = useAuthStore();
   const [images, setImages] = useState<ImageData[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,11 +45,11 @@ export const AllImagesManager: React.FC = () => {
 
       // Helper function to convert Firebase Timestamp to number
       const convertTimestamp = (ts: any): number => {
-        if (!ts) return Date.now();
+        if (!ts) return getVietnamTimestamp();
         if (typeof ts === 'number') return ts;
         if (ts && typeof ts === 'object' && ts.toMillis) return ts.toMillis();
         if (ts && typeof ts === 'object' && ts.seconds) return ts.seconds * 1000;
-        return Date.now();
+        return getVietnamTimestamp();
       };
 
       // Load users for mapping
@@ -250,9 +250,9 @@ export const AllImagesManager: React.FC = () => {
             {filteredImages.map((image, index) => (
               <motion.div
                 key={image.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
+                initial={{ getVietnamTimestamp, opacity: 0, y: 20 }}
+                animate={{ getVietnamTimestamp, opacity: 1, y: 0 }}
+                transition={{ getVietnamTimestamp, delay: index * 0.05 }}
                 className="glass rounded-lg overflow-hidden hover:bg-white/5 transition-colors cursor-pointer"
                 onClick={() => handleImageClick(image)}
               >

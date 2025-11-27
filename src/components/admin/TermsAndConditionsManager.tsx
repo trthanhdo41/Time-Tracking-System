@@ -104,7 +104,7 @@ export const TermsAndConditionsManager: React.FC = () => {
           {terms && (
             <div className="text-sm text-gray-400 mb-4">
               <p>Version: {terms.version}</p>
-              <p>Last updated: {new Date(terms.updatedAt).toLocaleString()}</p>
+              <p>Last updated: {new Date(terms.updatedAt).toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' })}</p>
               <p>Updated by: {terms.updatedBy}</p>
             </div>
           )}

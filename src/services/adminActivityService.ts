@@ -1,5 +1,6 @@
 import { db } from '@/config/firebase';
 import { collection, addDoc, query, orderBy, limit, getDocs, where, Timestamp } from 'firebase/firestore';
+import { getVietnamTimestamp } from '@/utils/time';
 
 export type AdminActionType = 
   | 'approve_image_delete'
@@ -38,7 +39,7 @@ export const logAdminActivity = async (
   try {
     await addDoc(collection(db, ADMIN_LOGS_COLLECTION), {
       ...log,
-      timestamp: Date.now(),
+      timestamp: getVietnamTimestamp(),
     });
   } catch (error) {
     console.error('Error logging admin activity:', error);

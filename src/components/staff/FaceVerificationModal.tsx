@@ -328,7 +328,7 @@ export const FaceVerificationModal: React.FC<FaceVerificationModalProps> = ({
         // First captcha verification - upload and save Face2
         try {
           toast.loading('Saving verification image...', { id: 'upload-face2' });
-          const timestamp = Date.now();
+          const timestamp = getVietnamTimestamp();
           face2Url = await uploadImageToImgbb(
             imageBlob,
             `${user.username}_face2_${timestamp}`
@@ -376,7 +376,7 @@ export const FaceVerificationModal: React.FC<FaceVerificationModalProps> = ({
           captchaSuccessCount: 0, // Reset counter after face verification
           faceVerificationCount: currentCount + 1,
           face2Url: face2Url,
-          updatedAt: Date.now()
+          updatedAt: getVietnamTimestamp()
         });
 
         // Log activity
@@ -412,7 +412,7 @@ export const FaceVerificationModal: React.FC<FaceVerificationModalProps> = ({
       // Create error report for admin
       try {
         const imageBlob = await captureImageFromVideo(videoRef.current!);
-        const timestamp = Date.now();
+        const timestamp = getVietnamTimestamp();
         let failedImageUrl = '';
         
         // Upload failed image

@@ -9,14 +9,14 @@ let lastActivityUpdate = 0;
 let activityPending = false;
 
 // Track if user is actively interacting (mouse/keyboard events)
-let lastActivityTime = getVietnamTimestamp();
+let lastActivityTime = getVietnamTimestamp(); // Use Vietnam timestamp for consistency
 let currentActivityTracking: (() => void) | null = null;
 
 /**
  * Update last activity time when user interacts (throttled to avoid lag)
  */
 const updateActivityThrottled = async (userId: string, sessionId?: string) => {
-  const now = getVietnamTimestamp();
+  const now = getVietnamTimestamp(); // Use Vietnam timestamp for consistency
 
   // Update local lastActivityTime immediately (no lag)
   lastActivityTime = now;
@@ -72,8 +72,8 @@ export const startActivityTracking = (userId: string, sessionId?: string) => {
     currentActivityTracking = null;
   }
   
-  lastActivityTime = Date.now();
-  lastActivityUpdate = Date.now();
+  lastActivityTime = getVietnamTimestamp();
+  lastActivityUpdate = getVietnamTimestamp();
   
   // Track mouse movements (throttled internally)
   const handleMouseMove = () => handleActivity(userId, sessionId);

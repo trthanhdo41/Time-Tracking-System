@@ -135,8 +135,8 @@ export const signIn = async (usernameOrEmail: string, password: string): Promise
                 role: 'staff', // Default to staff instead of admin for new accounts
                 department: 'System',
                 position: 'Employee',
-                createdAt: Date.now(),
-                updatedAt: Date.now(),
+                createdAt: getVietnamTimestamp(),
+                updatedAt: getVietnamTimestamp(),
                 isActive: true,
                 notificationsEnabled: true,
               };
@@ -148,8 +148,8 @@ export const signIn = async (usernameOrEmail: string, password: string): Promise
             // Update user status
             await updateDoc(doc(db, 'users', firebaseUser.uid), {
               status: 'online',
-              lastLoginAt: Date.now(),
-              lastActivityAt: Date.now()
+              lastLoginAt: getVietnamTimestamp(),
+              lastActivityAt: getVietnamTimestamp()
             });
             
             // Start user status tracking (no sessionId on login, will be updated on check-in)
@@ -220,8 +220,8 @@ export const signIn = async (usernameOrEmail: string, password: string): Promise
     // Update user status to online immediately
     await updateDoc(doc(db, 'users', userCredential.user.uid), {
       status: 'online',
-      lastLoginAt: Date.now(),
-      lastActivityAt: Date.now()
+      lastLoginAt: getVietnamTimestamp(),
+      lastActivityAt: getVietnamTimestamp()
     });
 
     // Start user status tracking
@@ -399,9 +399,9 @@ export const resetUserPasswordByAdmin = async (userId: string, newPassword: stri
     // Store new password in Firestore for admin reference
     await updateDoc(doc(db, 'users', userId), {
       passwordResetRequired: true,
-      passwordResetTime: Date.now(),
+      passwordResetTime: getVietnamTimestamp(),
       intendedPassword: newPassword, // Store for admin to share with user
-      updatedAt: Date.now()
+      updatedAt: getVietnamTimestamp()
     });
 
     // Log activity

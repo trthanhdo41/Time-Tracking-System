@@ -5,27 +5,43 @@ import { logActivity } from '@/services/activityLog';
 import { getVietnamTimestamp } from '@/utils/time';
 
 // Clean up sessions that have been inactive for more than X minutes
-const SESSION_INACTIVITY_THRESHOLD = 2 * 60 * 1000; // 2 minutes in milliseconds
+const SESSION_INACTIVITY_THRESHOLD = 5 * 60 * 1000; // 5 minutes in milliseconds (increased from 2 to prevent false positives)
+const SESSION_GRACE_PERIOD = 2 * 60 * 1000; // 2 minutes grace period for new sessions (don't auto-checkout within first 2 minutes)
 
 export const cleanupStaleSessions = async () => {
   try {
     const now = getVietnamTimestamp();
     const sessionsRef = collection(db, 'sessions');
-    
+
     // Get all active sessions (online or back_soon)
     const activeSessionsQuery = query(
-      sessionsRef, 
+      sessionsRef,
       where('status', 'in', ['online', 'back_soon'])
     );
     const snapshot = await getDocs(activeSessionsQuery);
-    
+
+    console.log(`[Cleanup] Checking ${snapshot.size} active sessions at ${new Date(now).toISOString()}`);
+
     const cleanupPromises: Promise<void>[] = [];
-    
+
     snapshot.forEach(async (sessionDoc) => {
       const sessionData = sessionDoc.data() as any;
 
       // Check if session is marked for immediate cleanup (e.g., user closed tab)
       const needsCleanup = sessionData.needsCleanup === true;
+
+      // Get checkInTime to calculate session age
+      let checkInTime: number;
+      if (sessionData.checkInTime && typeof sessionData.checkInTime === 'object' && 'seconds' in sessionData.checkInTime) {
+        checkInTime = sessionData.checkInTime.seconds * 1000;
+      } else if (typeof sessionData.checkInTime === 'number') {
+        checkInTime = sessionData.checkInTime;
+      } else {
+        checkInTime = now;
+      }
+
+      // Calculate session age
+      const sessionAge = now - checkInTime;
 
       // Get last activity time
       let lastActivityTime: number;
@@ -43,32 +59,44 @@ export const cleanupStaleSessions = async () => {
 
       const timeSinceLastActivity = now - lastActivityTime;
 
+      // ⚠️ IMPORTANT: Don't auto-checkout sessions within grace period (first 2 minutes)
+      // This prevents false positives where user just checked in but cleanup runs immediately
+      if (sessionAge < SESSION_GRACE_PERIOD && !needsCleanup) {
+        console.log(`[Cleanup] Skipping session ${sessionDoc.id} - within grace period (${Math.floor(sessionAge / 1000)}s old)`);
+        return; // Skip this session
+      }
+
       // If session has been inactive for more than threshold OR marked for cleanup, auto checkout
       if (needsCleanup || timeSinceLastActivity > SESSION_INACTIVITY_THRESHOLD) {
         const updatePromise = autoCheckoutSession(sessionDoc.id, sessionData, timeSinceLastActivity);
         cleanupPromises.push(updatePromise);
 
         if (needsCleanup) {
-          console.log(`Auto checkout session ${sessionDoc.id} due to tab close (needsCleanup flag)`);
+          console.log(`[Cleanup] Auto checkout session ${sessionDoc.id} due to tab close (needsCleanup flag)`);
         } else {
-          console.log(`Auto checkout session ${sessionDoc.id} due to inactivity (${Math.floor(timeSinceLastActivity / 1000 / 60)} minutes)`);
+          console.log(`[Cleanup] Auto checkout session ${sessionDoc.id} due to inactivity (${Math.floor(timeSinceLastActivity / 1000 / 60)} minutes)`);
         }
+      } else {
+        // Log sessions that are still active
+        console.log(`[Cleanup] Session ${sessionDoc.id} is active - last activity ${Math.floor(timeSinceLastActivity / 1000)}s ago`);
       }
     });
-    
+
     if (cleanupPromises.length > 0) {
       await Promise.all(cleanupPromises);
-      console.log(`Auto checked out ${cleanupPromises.length} stale sessions`);
+      console.log(`[Cleanup] Auto checked out ${cleanupPromises.length} stale sessions`);
+    } else {
+      console.log(`[Cleanup] No stale sessions found`);
     }
-    
+
   } catch (error) {
     // Silently ignore permission errors - this is expected for client-side cleanup
     // The actual cleanup should be done server-side (Cloud Functions) for proper permissions
     if (error instanceof Error && error.message.includes('permission')) {
-      // Expected error - client doesn't have permission to update other users' sessions
+      console.warn('[Cleanup] Permission denied - client cannot update other users sessions (expected)');
       return;
     }
-    console.error('Error cleaning up stale sessions:', error);
+    console.error('[Cleanup] Error cleaning up stale sessions:', error);
   }
 };
 
@@ -187,11 +215,18 @@ const autoCheckoutSession = async (sessionId: string, sessionData: any, timeSinc
 
 // Run cleanup every 30 seconds for faster response
 export const startSessionCleanupService = () => {
-  console.log('Starting session cleanup service (every 30s)...');
-  
-  // Run immediately
-  cleanupStaleSessions();
-  
-  // Then run every 30 seconds for faster detection
+  console.log('[Cleanup Service] Starting session cleanup service (every 30s)...');
+
+  // ⚠️ IMPORTANT: Don't run immediately - give new sessions grace period
+  // Wait 30 seconds before first cleanup run to avoid race conditions
+  console.log('[Cleanup Service] First cleanup will run in 30 seconds...');
+
+  // Run first cleanup after 30 seconds delay
+  setTimeout(() => {
+    console.log('[Cleanup Service] Running first cleanup check...');
+    cleanupStaleSessions();
+  }, 30 * 1000);
+
+  // Then run every 30 seconds thereafter
   setInterval(cleanupStaleSessions, 30 * 1000);
 };

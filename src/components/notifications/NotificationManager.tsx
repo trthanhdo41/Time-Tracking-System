@@ -6,6 +6,7 @@ import { BellIcon, XIcon } from '@/components/icons';
 import { soundManager } from '@/utils/sound';
 import { User } from '@/types';
 import toast from 'react-hot-toast';
+import { getVietnamTimestamp } from '@/utils/time';
 
 interface Notification {
   id: string;
@@ -42,7 +43,7 @@ export const NotificationManager: React.FC<NotificationManagerProps> = ({
           type: 'captcha',
           title: 'CAPTCHA Coming Soon',
           message: 'CAPTCHA will appear in 5 seconds. Please prepare.',
-          timestamp: Date.now(),
+          timestamp: getVietnamTimestamp(),
           acknowledged: false,
           actionRequired: false
         });
@@ -65,7 +66,7 @@ export const NotificationManager: React.FC<NotificationManagerProps> = ({
           type: 'face_verify',
           title: 'Face Verification Coming Soon',
           message: 'System will require face verification in 5 minutes. Please prepare.',
-          timestamp: Date.now(),
+          timestamp: getVietnamTimestamp(),
           acknowledged: false,
           actionRequired: true
         });
@@ -120,7 +121,7 @@ export const NotificationManager: React.FC<NotificationManagerProps> = ({
       const { db } = await import('@/config/firebase');
       await updateDoc(doc(db, 'users', user.id), {
         notificationsEnabled: newEnabled,
-        updatedAt: Date.now()
+        updatedAt: getVietnamTimestamp()
       });
       
       toast.success(
