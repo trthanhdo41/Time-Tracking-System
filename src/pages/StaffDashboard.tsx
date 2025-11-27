@@ -401,21 +401,20 @@ export const StaffDashboard: React.FC = () => {
 
       // Trigger face verification after N successful CAPTCHAs
       if ((currentCount + 1) >= requiredCaptchas) {
-        const warningSeconds = settings.faceVerification.warningBeforeSeconds || 30;
+        // Reduce warning time to 10 seconds for faster verification
+        const warningSeconds = 10;
 
         // Show warning notification
-        toast(`Face Verification will appear in ${warningSeconds} seconds. Please prepare.`, {
+        toast(`⚠️ Face Verification will appear in ${warningSeconds} seconds. Please prepare your face!`, {
           icon: '👤',
           duration: 4000,
         });
         soundManager.playCaptchaNotification();
 
-        // Play sound again 5 seconds before (if warning time > 5 seconds)
-        if (warningSeconds > 5) {
-          setTimeout(() => {
-            soundManager.playCaptchaNotification();
-          }, (warningSeconds - 5) * 1000);
-        }
+        // Play sound again 5 seconds before
+        setTimeout(() => {
+          soundManager.playCaptchaNotification();
+        }, 5000);
 
         // Show Face Verification modal after warning time
         setTimeout(() => {

@@ -277,7 +277,9 @@ export const FaceVerificationModal: React.FC<FaceVerificationModalProps> = ({
         throw new Error('No face detected. Please try again.');
       }
 
-      // Compare with Face0 (base face)
+      // Compare with Face0 (base face) - Primary verification
+      // Use more lenient threshold for Face Verification (0.55 vs 0.7 for check-in)
+      // because this is periodic verification, not initial authentication
       if (user.faceImageUrl) {
         const baseFaceImg = new Image();
         baseFaceImg.crossOrigin = 'anonymous'; // Fix CORS
@@ -290,32 +292,16 @@ export const FaceVerificationModal: React.FC<FaceVerificationModalProps> = ({
         const baseFaceDetection = await detectFace(baseFaceImg);
         if (baseFaceDetection) {
           const similarity = compareFaces(detection.descriptor, baseFaceDetection.descriptor);
-          
-          if (similarity < 0.6) {
-            throw new Error('Face does not match Face0.');
+
+          // Lower threshold for periodic verification (0.55 instead of 0.6)
+          if (similarity < 0.55) {
+            throw new Error(`Face verification failed. Similarity: ${(similarity * 100).toFixed(1)}%`);
           }
         }
       }
 
-      // Compare with Face1 (first check-in)
-      if (user.face1Url) {
-        const face1Img = new Image();
-        face1Img.crossOrigin = 'anonymous'; // Fix CORS
-        face1Img.src = user.face1Url;
-        await new Promise((resolve, reject) => {
-          face1Img.onload = resolve;
-          face1Img.onerror = reject;
-        });
-
-        const face1Detection = await detectFace(face1Img);
-        if (face1Detection) {
-          const similarity = compareFaces(detection.descriptor, face1Detection.descriptor);
-          
-          if (similarity < 0.6) {
-            throw new Error('Face does not match Face1.');
-          }
-        }
-      }
+      // Skip Face1 comparison - only compare with Face0 (base face)
+      // Face1 is just the first check-in photo, not needed for verification
 
       // Capture Face2 image
       const imageBlob = await captureImageFromVideo(videoRef.current);

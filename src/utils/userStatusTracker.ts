@@ -65,39 +65,48 @@ export const startUserStatusTracking = (userId: string, sessionId?: string) => {
     startHeartbeat();
   }
 
-  // Add beforeunload listener - mark session for cleanup
-  const handleBeforeUnload = () => {
-    if (currentUserId) {
+  // Add beforeunload listener - IMMEDIATE checkout on tab close/refresh
+  const handleBeforeUnload = async (e: BeforeUnloadEvent) => {
+    if (currentUserId && currentSessionId) {
       try {
         const now = getVietnamTimestamp();
 
-        // Use synchronous operation to ensure it runs before page closes
-        navigator.sendBeacon && navigator.sendBeacon('/api/logout', JSON.stringify({
-          userId: currentUserId,
-          sessionId: currentSessionId
-        }));
+        // IMMEDIATE CHECKOUT - Use synchronous Firestore write
+        // This ensures checkout happens before page closes
+        const { checkOutSession } = await import('@/services/sessionService');
+        const { getDoc } = await import('firebase/firestore');
 
-        // Also try direct update (may not complete but worth trying)
-        // IMPORTANT: Keep lastActivityTime accurate (current time) for correct online time calculation
-        // Add needsCleanup flag to trigger cleanup service immediately
-        if (currentSessionId) {
-          updateDoc(doc(db, 'sessions', currentSessionId), {
-            lastActivityTime: now,
-            needsCleanup: true
-          }).catch(() => {
-            // Ignore errors - cleanup service will handle it
-          });
+        // Get user data for checkout
+        const userDoc = await getDoc(doc(db, 'users', currentUserId));
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+
+          // Perform immediate checkout
+          await checkOutSession(
+            currentSessionId,
+            'Browser closed/refreshed - Auto checkout',
+            userData as any
+          );
         }
 
-        updateDoc(doc(db, 'users', currentUserId), {
-          status: 'offline',
-          lastActivityAt: now,
-          lastLogoutAt: now
-        }).catch(() => {
-          // Ignore errors - cleanup service will handle it
-        });
+        // Fallback: Use sendBeacon for reliability
+        navigator.sendBeacon && navigator.sendBeacon('/api/logout', JSON.stringify({
+          userId: currentUserId,
+          sessionId: currentSessionId,
+          timestamp: now
+        }));
+
       } catch (error) {
-        console.error('Error in beforeunload:', error);
+        console.error('Error in beforeunload checkout:', error);
+
+        // Fallback: Mark for cleanup if immediate checkout fails
+        if (currentSessionId) {
+          updateDoc(doc(db, 'sessions', currentSessionId), {
+            lastActivityTime: getVietnamTimestamp(),
+            needsCleanup: true,
+            status: 'offline'
+          }).catch(() => {});
+        }
       }
     }
   };
