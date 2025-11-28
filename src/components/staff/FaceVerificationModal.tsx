@@ -317,9 +317,18 @@ export const FaceVerificationModal: React.FC<FaceVerificationModalProps> = ({
 
       console.log(`[Face Verification] Similarity Score: ${(similarity * 100).toFixed(1)}%`);
 
-      // VERY lenient threshold: 0.45 (vs 0.7 for check-in)
-      // This is ~36% easier than check-in verification
-      const FACE_VERIFICATION_THRESHOLD = 0.45;
+      // Load threshold from system settings - SAME as check-in for consistency
+      // This ensures Face Verification (periodic) uses the same threshold as Check-in (initial)
+      let FACE_VERIFICATION_THRESHOLD = 0.7; // Default same as check-in
+      try {
+        const { getSystemSettings } = await import('@/services/systemSettingsService');
+        const settings = await getSystemSettings();
+        FACE_VERIFICATION_THRESHOLD = settings.faceVerification.similarityThreshold || 0.7;
+        console.log(`[Face Verification] Using threshold from settings: ${(FACE_VERIFICATION_THRESHOLD * 100).toFixed(0)}%`);
+      } catch (error) {
+        console.warn('[Face Verification] Failed to load settings, using default threshold 0.7');
+      }
+
       if (similarity < FACE_VERIFICATION_THRESHOLD) {
         console.error(`[Face Verification] ❌ FAILED - Similarity ${(similarity * 100).toFixed(1)}% < ${(FACE_VERIFICATION_THRESHOLD * 100).toFixed(0)}%`);
         throw new Error(`Face verification failed. Similarity: ${(similarity * 100).toFixed(1)}% (required: ${(FACE_VERIFICATION_THRESHOLD * 100).toFixed(0)}%)`);
