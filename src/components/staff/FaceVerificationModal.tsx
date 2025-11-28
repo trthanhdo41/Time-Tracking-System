@@ -270,38 +270,62 @@ export const FaceVerificationModal: React.FC<FaceVerificationModalProps> = ({
     setStep('processing');
 
     try {
+      console.log('[Face Verification] Starting verification...');
+
       // Detect face from video
       const detection = await detectFace(videoRef.current);
-      
+
       if (!detection) {
-        throw new Error('No face detected. Please try again.');
+        console.error('[Face Verification] ❌ No face detected in video');
+        throw new Error('No face detected. Please position your face clearly and try again.');
       }
+
+      console.log('[Face Verification] ✅ Face detected in video');
 
       // Compare with Face0 (base face) - Primary verification
-      // Use more lenient threshold for Face Verification (0.55 vs 0.7 for check-in)
-      // because this is periodic verification, not initial authentication
-      if (user.faceImageUrl) {
-        const baseFaceImg = new Image();
-        baseFaceImg.crossOrigin = 'anonymous'; // Fix CORS
-        baseFaceImg.src = user.faceImageUrl;
-        await new Promise((resolve, reject) => {
-          baseFaceImg.onload = resolve;
-          baseFaceImg.onerror = reject;
-        });
-
-        const baseFaceDetection = await detectFace(baseFaceImg);
-        if (baseFaceDetection) {
-          const similarity = compareFaces(detection.descriptor, baseFaceDetection.descriptor);
-
-          // Lower threshold for periodic verification (0.55 instead of 0.6)
-          if (similarity < 0.55) {
-            throw new Error(`Face verification failed. Similarity: ${(similarity * 100).toFixed(1)}%`);
-          }
-        }
+      // Use MUCH MORE lenient threshold for Face Verification (0.45 vs 0.7 for check-in)
+      // Periodic verification should be easier than initial authentication
+      // User already passed check-in with 0.7, so 0.45 is reasonable for re-verification
+      if (!user.faceImageUrl) {
+        console.warn('[Face Verification] ⚠️ No base face image (Face0) found for user');
+        throw new Error('No base face image found. Please contact administrator.');
       }
 
-      // Skip Face1 comparison - only compare with Face0 (base face)
-      // Face1 is just the first check-in photo, not needed for verification
+      const baseFaceImg = new Image();
+      baseFaceImg.crossOrigin = 'anonymous'; // Fix CORS
+      baseFaceImg.src = user.faceImageUrl;
+
+      console.log('[Face Verification] Loading base face image...');
+      await new Promise((resolve, reject) => {
+        baseFaceImg.onload = () => {
+          console.log('[Face Verification] ✅ Base face image loaded');
+          resolve(null);
+        };
+        baseFaceImg.onerror = () => {
+          console.error('[Face Verification] ❌ Failed to load base face image');
+          reject(new Error('Failed to load base face image. Please try again.'));
+        };
+      });
+
+      const baseFaceDetection = await detectFace(baseFaceImg);
+      if (!baseFaceDetection) {
+        console.error('[Face Verification] ❌ Could not detect face in base image');
+        throw new Error('Could not detect face in base image. Please contact administrator.');
+      }
+
+      const similarity = compareFaces(detection.descriptor, baseFaceDetection.descriptor);
+
+      console.log(`[Face Verification] Similarity Score: ${(similarity * 100).toFixed(1)}%`);
+
+      // VERY lenient threshold: 0.45 (vs 0.7 for check-in)
+      // This is ~36% easier than check-in verification
+      const FACE_VERIFICATION_THRESHOLD = 0.45;
+      if (similarity < FACE_VERIFICATION_THRESHOLD) {
+        console.error(`[Face Verification] ❌ FAILED - Similarity ${(similarity * 100).toFixed(1)}% < ${(FACE_VERIFICATION_THRESHOLD * 100).toFixed(0)}%`);
+        throw new Error(`Face verification failed. Similarity: ${(similarity * 100).toFixed(1)}% (required: ${(FACE_VERIFICATION_THRESHOLD * 100).toFixed(0)}%)`);
+      }
+
+      console.log(`[Face Verification] ✅ PASSED with ${(similarity * 100).toFixed(1)}%`);
 
       // Capture Face2 image
       const imageBlob = await captureImageFromVideo(videoRef.current);
@@ -313,6 +337,9 @@ export const FaceVerificationModal: React.FC<FaceVerificationModalProps> = ({
       if (!user.face2Url && isImageUploadConfigured()) {
         // First captcha verification - upload and save Face2
         try {
+          // Import getVietnamTimestamp first
+          const { getVietnamTimestamp } = await import('@/utils/time');
+
           toast.loading('Saving verification image...', { id: 'upload-face2' });
           const timestamp = getVietnamTimestamp();
           face2Url = await uploadImageToImgbb(
@@ -324,7 +351,6 @@ export const FaceVerificationModal: React.FC<FaceVerificationModalProps> = ({
           // Save Face2 to user document
           const { updateDoc, doc } = await import('firebase/firestore');
           const { db } = await import('@/config/firebase');
-          const { getVietnamTimestamp } = await import('@/utils/time');
 
           await updateDoc(doc(db, 'users', user.id), {
             face2Url: face2Url,
@@ -341,23 +367,24 @@ export const FaceVerificationModal: React.FC<FaceVerificationModalProps> = ({
       }
 
       // Continue with captcha verification
-      const { updateDoc, doc, getDoc } = await import('firebase/firestore');
+      const { updateDoc, doc } = await import('firebase/firestore');
       const { db } = await import('@/config/firebase');
       const { logActivity } = await import('@/services/activityLog');
+      const { getVietnamTimestamp } = await import('@/utils/time');
 
       // Find and reset captchaSuccessCount in current session
       const sessionsQuery = await import('firebase/firestore').then(m => m.query);
       const collection = await import('firebase/firestore').then(m => m.collection);
       const where = await import('firebase/firestore').then(m => m.where);
       const getDocs = await import('firebase/firestore').then(m => m.getDocs);
-      
+
       const q = sessionsQuery(collection(db, 'sessions'), where('userId', '==', user.id), where('status', '==', 'online'));
       const sessionsSnap = await getDocs(q);
-      
+
       if (!sessionsSnap.empty) {
         const sessionDoc = sessionsSnap.docs[0];
         const currentCount = sessionDoc.data().faceVerificationCount || 0;
-        
+
         await updateDoc(doc(db, 'sessions', sessionDoc.id), {
           captchaSuccessCount: 0, // Reset counter after face verification
           faceVerificationCount: currentCount + 1,
@@ -397,22 +424,23 @@ export const FaceVerificationModal: React.FC<FaceVerificationModalProps> = ({
       
       // Create error report for admin
       try {
+        const { getVietnamTimestamp } = await import('@/utils/time');
         const imageBlob = await captureImageFromVideo(videoRef.current!);
         const timestamp = getVietnamTimestamp();
         let failedImageUrl = '';
-        
+
         // Upload failed image
         if (isImageUploadConfigured()) {
           try {
             failedImageUrl = await uploadImageToImgbb(
-              imageBlob, 
+              imageBlob,
               `${user.username}_face2_failed_${timestamp}`
             );
           } catch (uploadError) {
             console.error('Failed image upload error:', uploadError);
           }
         }
-        
+
         // Create error report in Firestore
         const { addDoc, collection, serverTimestamp } = await import('firebase/firestore');
         const { db } = await import('@/config/firebase');
