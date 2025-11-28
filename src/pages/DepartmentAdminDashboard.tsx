@@ -207,13 +207,22 @@ export const DepartmentAdminDashboard: React.FC = () => {
       // Upload face image
       const formData = new FormData();
       formData.append('image', faceImage);
-      
+
       const uploadResponse = await fetch('https://api.imgbb.com/1/upload?key=ae21ac039240a7d40788bcda9a822d8e', {
         method: 'POST',
         body: formData
       });
-      
+
+      if (!uploadResponse.ok) {
+        throw new Error(`Image upload failed: ${uploadResponse.statusText}`);
+      }
+
       const uploadData = await uploadResponse.json();
+
+      if (!uploadData.success || !uploadData.data || !uploadData.data.url) {
+        throw new Error('Image upload failed: Invalid response from server');
+      }
+
       const face0Url = uploadData.data.url;
 
       // Auto-generate username from email (part before @)

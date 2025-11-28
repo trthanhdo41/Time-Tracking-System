@@ -371,15 +371,16 @@ export const CheckInCamera: React.FC<CheckInCameraProps> = ({ onClose, onSuccess
       if (!user.face1Url && isImageUploadConfigured()) {
         // First check-in - upload and save Face1
         try {
+          // Import dependencies first
+          const { updateDoc, doc } = await import('firebase/firestore');
+          const { db } = await import('@/config/firebase');
+          const { getVietnamTimestamp } = await import('@/utils/time');
+
           toast.loading('Saving check-in image...', { id: 'upload-face1' });
           face1Url = await uploadImageToImgbb(imageBlob, `${user.username}_face1_${getVietnamTimestamp()}`);
           toast.dismiss('upload-face1');
 
           // Save Face1 to user document
-          const { updateDoc, doc } = await import('firebase/firestore');
-          const { db } = await import('@/config/firebase');
-          const { getVietnamTimestamp } = await import('@/utils/time');
-
           await updateDoc(doc(db, 'users', user.id), {
             face1Url: face1Url,
             updatedAt: getVietnamTimestamp()
