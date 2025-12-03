@@ -11,6 +11,7 @@ import { CaptchaModal } from '@/components/staff/CaptchaModal';
 import { BackSoonModal } from '@/components/staff/BackSoonModal';
 import { FaceVerificationModal } from '@/components/staff/FaceVerificationModal';
 import { ImageGallery } from '@/components/staff/ImageGallery';
+import { SessionDebugPanel } from '@/components/debug/SessionDebugPanel';
 import { 
   CheckOutIcon, 
   BackSoonIcon, 
@@ -782,6 +783,11 @@ export const StaffDashboard: React.FC = () => {
           </div>
         </div>
       </Modal>
+
+      {/* Debug Panel - Only show when session is active */}
+      {session && session.status === 'online' && (
+        <SessionDebugPanel />
+      )}
 
     </div>
   );

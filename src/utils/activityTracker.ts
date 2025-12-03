@@ -62,6 +62,34 @@ const handleActivity = (userId: string, sessionId?: string) => {
 };
 
 /**
+ * Detect if user is active on the system (even in other apps)
+ * This uses Page Visibility API + focus events to detect system-level activity
+ */
+const detectSystemActivity = (userId: string, sessionId?: string) => {
+  // When page becomes visible again, it means user returned to this tab
+  // This indicates they were active on the system (even if in other apps)
+  const handleVisibilityChange = () => {
+    if (document.visibilityState === 'visible') {
+      // User returned to this tab - they were active on system
+      updateActivityThrottled(userId, sessionId);
+    }
+  };
+
+  // When window gains focus, user is active
+  const handleFocus = () => {
+    updateActivityThrottled(userId, sessionId);
+  };
+
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+  window.addEventListener('focus', handleFocus);
+
+  return () => {
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+    window.removeEventListener('focus', handleFocus);
+  };
+};
+
+/**
  * Start tracking user activity (mouse/keyboard/touch events)
  * This uses throttling to prevent lag - only updates Firestore every 30 seconds max
  */
@@ -71,24 +99,27 @@ export const startActivityTracking = (userId: string, sessionId?: string) => {
     currentActivityTracking();
     currentActivityTracking = null;
   }
-  
+
   lastActivityTime = getVietnamTimestamp();
   lastActivityUpdate = getVietnamTimestamp();
-  
+
   // Track mouse movements (throttled internally)
   const handleMouseMove = () => handleActivity(userId, sessionId);
   const handleClick = () => handleActivity(userId, sessionId);
   const handleKeyPress = () => handleActivity(userId, sessionId);
   const handleTouchStart = () => handleActivity(userId, sessionId);
   const handleScroll = () => handleActivity(userId, sessionId);
-  
+
   // Attach listeners with passive: true for better performance
   window.addEventListener('mousemove', handleMouseMove, { passive: true });
   window.addEventListener('click', handleClick, { passive: true });
   window.addEventListener('keydown', handleKeyPress, { passive: true });
   window.addEventListener('touchstart', handleTouchStart, { passive: true });
   window.addEventListener('scroll', handleScroll, { passive: true });
-  
+
+  // Also track system-level activity (when user returns to tab)
+  const cleanupSystemActivity = detectSystemActivity(userId, sessionId);
+
   // Store cleanup function
   const cleanup = () => {
     window.removeEventListener('mousemove', handleMouseMove);
@@ -96,12 +127,13 @@ export const startActivityTracking = (userId: string, sessionId?: string) => {
     window.removeEventListener('keydown', handleKeyPress);
     window.removeEventListener('touchstart', handleTouchStart);
     window.removeEventListener('scroll', handleScroll);
-    
+    cleanupSystemActivity(); // Clean up system activity listeners
+
     if (currentActivityTracking === cleanup) {
       currentActivityTracking = null;
     }
   };
-  
+
   currentActivityTracking = cleanup;
   return cleanup;
 };

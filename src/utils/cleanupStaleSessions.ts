@@ -144,11 +144,23 @@ const autoCheckoutSession = async (sessionId: string, sessionData: any, timeSinc
     const totalBackSoonTime = Math.floor(
       backSoonEvents.reduce((sum: number, event: any) => sum + (event.duration || 0), 0) / 1000
     );
-    
-    // Calculate total online time (DO NOT count inactive time)
-    // Only count from checkInTime to lastActivityTime
-    const activeTime = lastActivityTime - checkInTime;
-    const totalOnlineTime = Math.max(0, Math.floor((activeTime) / 1000) - totalBackSoonTime);
+
+    // Calculate total online time
+    // Logic: Count from checkInTime to the point when user went inactive
+    //
+    // Example:
+    // - Check in: 10:00:00
+    // - Last activity: 10:05:00 (heartbeat updated)
+    // - Now: 10:11:00 (cleanup runs)
+    // - Inactive time: 6 minutes
+    // - Point when went inactive: 10:11:00 - 6min = 10:05:00
+    // - Total online time: 10:05:00 - 10:00:00 = 5 minutes ✓
+    //
+    // This way, we don't count the inactive period, but we also don't lose time
+    // if heartbeat failed to update lastActivityTime.
+    const pointWhenWentInactive = now - timeSinceLastActivity;
+    const activeTime = pointWhenWentInactive - checkInTime;
+    const totalOnlineTime = Math.max(0, Math.floor(activeTime / 1000) - totalBackSoonTime);
 
     const inactiveMinutes = Math.floor(timeSinceLastActivity / 1000 / 60);
     

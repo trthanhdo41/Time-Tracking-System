@@ -6,8 +6,9 @@ let heartbeatInterval: NodeJS.Timeout | null = null;
 let currentUserId: string | null = null;
 let currentSessionId: string | null = null;
 
-// Heartbeat only runs when tab is visible
-const HEARTBEAT_INTERVAL = 15000; // 15 seconds when visible
+// Heartbeat intervals
+const HEARTBEAT_INTERVAL_VISIBLE = 15000; // 15 seconds when tab is visible
+const HEARTBEAT_INTERVAL_HIDDEN = 60000; // 60 seconds when tab is hidden (keep alive)
 
 export const startUserStatusTracking = (userId: string, sessionId?: string) => {
   // Clear any existing interval
@@ -23,15 +24,18 @@ export const startUserStatusTracking = (userId: string, sessionId?: string) => {
     updateUserStatus(userId, 'online');
   }
   
-  // Start heartbeat only if tab is visible
-  const startHeartbeat = () => {
+  // Start heartbeat - works for both visible and hidden tabs
+  const startHeartbeat = (isVisible: boolean = true) => {
     if (heartbeatInterval) {
       clearInterval(heartbeatInterval);
     }
-    
+
+    // Use different intervals based on visibility
+    const interval = isVisible ? HEARTBEAT_INTERVAL_VISIBLE : HEARTBEAT_INTERVAL_HIDDEN;
+
     heartbeatInterval = setInterval(async () => {
-      // Only heartbeat if tab is visible and user has active session
-      if (document.visibilityState === 'visible' && currentUserId && currentSessionId) {
+      // Heartbeat runs even when tab is hidden to prevent auto checkout
+      if (currentUserId && currentSessionId) {
         try {
           const now = getVietnamTimestamp();
           await updateDoc(doc(db, 'users', currentUserId), {
@@ -44,12 +48,13 @@ export const startUserStatusTracking = (userId: string, sessionId?: string) => {
             lastActivityTime: now
           });
 
-          console.log(`Heartbeat updated for user ${currentUserId}`);
+          const visibility = document.visibilityState === 'visible' ? 'visible' : 'hidden';
+          console.log(`Heartbeat updated for user ${currentUserId} (tab ${visibility})`);
         } catch (error) {
           console.error('Error updating user heartbeat:', error);
         }
       }
-    }, HEARTBEAT_INTERVAL);
+    }, interval);
   };
   
   // Stop heartbeat when tab is hidden
@@ -60,10 +65,9 @@ export const startUserStatusTracking = (userId: string, sessionId?: string) => {
     }
   };
   
-  // Start heartbeat if currently visible
-  if (document.visibilityState === 'visible') {
-    startHeartbeat();
-  }
+  // Start heartbeat based on current visibility state
+  const isVisible = document.visibilityState === 'visible';
+  startHeartbeat(isVisible);
 
   // Add beforeunload listener - IMMEDIATE checkout on tab close/refresh
   const handleBeforeUnload = async (e: BeforeUnloadEvent) => {
@@ -113,22 +117,22 @@ export const startUserStatusTracking = (userId: string, sessionId?: string) => {
 
   window.addEventListener('beforeunload', handleBeforeUnload);
 
-  // Add visibility change listener - only control heartbeat, no auto checkout
+  // Add visibility change listener - adjust heartbeat interval based on visibility
   const handleVisibilityChange = async () => {
     if (!currentUserId) return;
 
     if (document.visibilityState === 'hidden') {
-      // Tab is hidden - stop heartbeat to save resources
-      // DO NOT checkout or set offline - user may just minimize or switch tabs
-      stopHeartbeat();
-      console.log('Tab hidden - heartbeat paused');
+      // Tab is hidden - switch to slower heartbeat (60s) to keep session alive
+      // DO NOT stop heartbeat completely - this prevents auto checkout
+      console.log('Tab hidden - switching to slower heartbeat (60s)');
+      startHeartbeat(false); // false = hidden mode with 60s interval
 
     } else if (document.visibilityState === 'visible') {
-      // Tab is visible again - resume heartbeat
-      startHeartbeat();
-      console.log('Tab visible - heartbeat resumed');
+      // Tab is visible again - switch to faster heartbeat (15s)
+      console.log('Tab visible - switching to faster heartbeat (15s)');
+      startHeartbeat(true); // true = visible mode with 15s interval
 
-      // Update lastActivityTime when tab becomes visible again
+      // Update lastActivityTime immediately when tab becomes visible again
       if (currentSessionId) {
         try {
           const now = getVietnamTimestamp();
