@@ -785,7 +785,7 @@ export const StaffDashboard: React.FC = () => {
       </Modal>
 
       {/* Debug Panel - Only show when session is active */}
-      {session && session.status === 'online' && (
+      {currentSession && currentSession.status === 'online' && (
         <SessionDebugPanel />
       )}
 
